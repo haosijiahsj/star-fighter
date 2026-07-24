@@ -72,15 +72,30 @@
   }
   .btn:hover{ transform:translateY(-2px); filter:brightness(1.08); }
   .btn:active{ transform:translateY(0); }
-  .btn.dice{ flex:none; width:44px; padding:0; font-size:18px; background:linear-gradient(135deg,#2a3570,#4658b8); color:#fff; box-shadow:0 8px 24px rgba(60,90,255,.35); }
-  .btn.ghost{ background:transparent; color:#bcd0ff; border:1px solid var(--stroke); box-shadow:none; }
+  .btn.dice{ flex:none; width:44px; padding:0; font-size:18px; border-radius:12px;
+    background:rgba(10,16,44,.45); border:1px solid var(--stroke); color:#cfe0ff; box-shadow:none; }
+  .btn.dice:hover{ border-color:var(--neon); color:#fff; }
+  /* 通用幽灵胶囊：与主界面「机库」按钮同语言（玻璃底 + 细边 + 青 hover） */
+  .btn.ghost{ background:rgba(10,16,44,.4); color:#cfe0ff; border:1px solid var(--stroke); box-shadow:none; }
+  .btn.ghost:hover{ transform:translateY(-1px); border-color:var(--neon); color:#fff; }
+  /* 主操作（确认 / 继续 / 再来）：实色青 + 青光晕，对应激活 / 就绪语言 */
+  .btn.primary{ background:linear-gradient(135deg,var(--neon),#4fd6ff); color:#04121a; border:1px solid transparent;
+    box-shadow:0 8px 24px rgba(34,230,255,.4); }
+  .btn.primary:hover{ transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 10px 30px rgba(34,230,255,.6); }
   .btn.big{ width:100%; margin-top:14px; font-size:14px; padding:12px; }
   .card.hero{ display:flex; flex-direction:column; gap:16px; align-items:center; background:transparent; border:none; box-shadow:none; padding:0; }
   .nick-chip{ align-self:center; background:rgba(10,16,44,.6); border:1px solid var(--stroke); color:#cfe0ff; border-radius:999px; padding:7px 14px; font-size:12px; cursor:pointer; transition:.15s; }
   .nick-chip:hover{ border-color:var(--neon); }
   .nick-chip b{ color:var(--gold); }
   .nick-chip .dice-ic{ opacity:.7; margin-left:4px; }
-  .nick-edit{ display:flex; gap:10px; width:100%; }
+  /* 昵称修改弹窗 */
+  .modal{ position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+    background:rgba(4,8,22,.6); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); pointer-events:auto; }
+  .modal-card{ width:100%; max-width:300px; background:var(--panel); border:1px solid var(--stroke);
+    border-radius:16px; padding:22px 20px; box-shadow:0 20px 50px rgba(0,0,0,.6); }
+  .modal-title{ font-size:15px; font-weight:800; color:#dff6ff; margin-bottom:16px; letter-spacing:1px; text-align:center; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .modal-actions .btn{ flex:1; }
   .btn.start-orb{
     width:172px; height:172px; border-radius:50%;
     background:rgba(8,14,40,.28); border:2px solid rgba(34,230,255,.55);
@@ -99,6 +114,11 @@
   .btn.hangar{ background:rgba(10,16,44,.4); border:1px solid var(--stroke); color:#cfe0ff;
     border-radius:999px; padding:10px 20px; font-size:13px; font-weight:700; box-shadow:none; }
   .btn.hangar:hover{ border-color:var(--neon); color:#fff; transform:translateY(-1px); }
+  #warpSkip{ position:absolute; left:50%; bottom:26px; transform:translateX(-50%); z-index:30;
+    pointer-events:auto; cursor:pointer; background:rgba(10,16,44,.72); border:1px solid var(--stroke);
+    color:#cfe0ff; border-radius:999px; padding:9px 22px; font-size:13px; font-weight:700; letter-spacing:1px;
+    box-shadow:0 8px 24px rgba(0,0,0,.4); }
+  #warpSkip:hover{ border-color:var(--neon); color:#fff; }
 
   .hint{ font-size:12px; color:#7f96d6; margin-top:14px; line-height:1.7; }
   .kbd{ display:inline-block; background:rgba(120,160,255,.15); border:1px solid var(--stroke); border-radius:6px; padding:1px 7px; font-size:11px; }
@@ -106,19 +126,28 @@
   /* ---------- HUD ---------- */
   #hud{ position:absolute; inset:0; pointer-events:none; z-index:4; }
   .hud-top{ position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; padding:14px 16px; }
-  .score-box{ font-weight:900; font-size:15px; }
-  .score-box .num{ font-size:26px; color:var(--gold); text-shadow:0 0 18px rgba(255,215,106,.5); }
-  .score-box small{ display:block; color:#8fb0ff; font-size:10px; letter-spacing:2px; }
-  .stat-right{ text-align:right; font-size:12px; color:#9fb6ff; }
+  .score-box{ font-weight:900; font-size:15px; line-height:1.05; align-self:flex-end; }  /* 底部与右侧水平对齐 */
+  .score-box .num{ display:block; font-size:24px; color:var(--gold); text-shadow:0 0 18px rgba(255,215,106,.5); }
+  .score-box small{ display:block; color:var(--neon); font-size:10px; letter-spacing:1px; }
+  .lv-box{ position:absolute; left:50%; top:14px; transform:translateX(-50%); text-align:center; }  /* 第X关：真正水平居中（不随左右栏宽度偏移） */
+  .score-box .coin-box{ display:inline-flex; width:auto; margin-top:2px; border:none; background:transparent; padding:2px 0; font-size:13px; line-height:1; box-shadow:none; }  /* 金币移到分数正下方，去边框改纯文字 */
+  .stat-right{ text-align:right; font-size:12px; color:#9fb6ff; align-self:flex-end; }  /* 底部与左侧金币水平对齐 */
   .lives{ display:flex; gap:5px; justify-content:flex-end; margin-top:4px; }
   .life{ width:14px; height:14px; filter:drop-shadow(0 0 5px var(--danger)); }
-  .bar{ width:120px; height:7px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; margin-top:8px; margin-left:auto; border:1px solid var(--stroke); }
-  .bar > i{ display:block; height:100%; width:100%; background:linear-gradient(90deg,#3affa3,#ffe14d,#ff4d6d); transition:width .15s; }
-  .bar.rage{ margin-top:6px; }
-  .bar.rage > i{ background:linear-gradient(90deg,#ff7a18,#ffd000); box-shadow:0 0 8px rgba(255,180,0,.6); }
+  .bar{ width:120px; height:8px; border-radius:6px; background:rgba(8,12,30,.5); overflow:hidden; margin-top:8px; margin-left:auto; border:1px solid rgba(34,230,255,.35); box-shadow:inset 0 0 8px rgba(34,230,255,.12); }
+  .bar > i{ display:block; height:100%; width:100%; background:linear-gradient(90deg,var(--neon),#3affa3); transition:width .15s; }
   #pauseBtn{ pointer-events:auto; }
-  #ultBtn{ position:absolute; right:16px; bottom:18px; width:60px; height:60px; border-radius:50%; border:2px solid rgba(255,177,59,.45); background:radial-gradient(circle at 50% 38%, rgba(70,46,22,.65), rgba(18,14,28,.8)); color:#ff9a3c; font-size:24px; line-height:1; opacity:.4; pointer-events:auto; cursor:pointer; transition:.2s; }
-  #ultBtn.ready{ opacity:1; border-color:#ffd000; box-shadow:0 0 24px rgba(255,200,60,.85); animation:ultPulse 1s infinite; }
+  /* 大招按钮：与怒气环合并，圆环表示怒气积累进度 */
+  #ultBtn{ position:absolute; right:16px; bottom:18px; width:64px; height:64px; border-radius:50%; border:none; padding:0;
+    background:radial-gradient(circle at 50% 38%, rgba(70,46,22,.65), rgba(18,14,28,.85)); color:#ff9a3c; font-size:24px; line-height:1;
+    opacity:.5; pointer-events:auto; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.2s; }
+  #ultBtn .ult-ring{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); pointer-events:none; }
+  #ultBtn .ult-track{ fill:none; stroke:rgba(255,177,59,.18); stroke-width:4; }
+  #ultBtn .ult-prog{ fill:none; stroke:#ffd000; stroke-width:4; stroke-linecap:round;
+    stroke-dasharray:163.36; stroke-dashoffset:163.36; transition:stroke-dashoffset .15s; }
+  #ultBtn .ult-ic{ position:relative; z-index:1; font-size:24px; filter:drop-shadow(0 0 4px rgba(255,150,40,.6)); }
+  #ultBtn.ready{ opacity:1; box-shadow:0 0 24px rgba(255,200,60,.85); animation:ultPulse 1s infinite; }
+  #ultBtn.ready .ult-prog{ stroke:#ffe14d; filter:drop-shadow(0 0 5px rgba(255,220,80,.95)); }
   @keyframes ultPulse{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.08);} }
 
   /* ---------- Leaderboard ---------- */
@@ -166,10 +195,22 @@
   .hangar-card .thumb{ width:100%; height:70px; }
   .hangar-card .nm{ font-weight:800; color:#dbe6ff; font-size:14px; }
   .hangar-card .stat{ color:#8fa0d8; font-size:11px; text-align:center; min-height:14px; line-height:1.5; }
-  .hangar-card .act{ width:100%; margin-top:2px; padding:8px 0; font-size:13px; }
-  .hangar-card .act:disabled{ opacity:.45; cursor:default; }
-  .hangar-card .act.ok{ background:linear-gradient(135deg,#3affa3,#22e6ff); }
-  .hangar-card .act.warn{ background:linear-gradient(135deg,#ffd76a,#ff9f1c); color:#3a2400; }
+  /* 机库按钮：统一为主界面「玻璃幽灵胶囊」风格 */
+  .hangar-card .act{
+    width:100%; margin-top:2px; padding:9px 0; font-size:13px; font-weight:700; letter-spacing:1px;
+    border-radius:999px;                                   /* 胶囊，呼应主界面 */
+    background:rgba(10,16,44,.45); border:1px solid var(--stroke); color:#cfe0ff;
+    box-shadow:none; cursor:pointer; transition:transform .12s, border-color .15s, color .15s, box-shadow .2s;
+  }
+  .hangar-card .act:hover{ border-color:var(--neon); color:#fff; transform:translateY(-1px); }
+  .hangar-card .act:disabled{ opacity:.4; cursor:default; transform:none; }
+  /* 已选/激活态：实色青 + 呼吸光晕，对应主界面「就绪」发光语言 */
+  .hangar-card .act.ok{ background:linear-gradient(135deg,var(--neon),#4fd6ff); border-color:transparent; color:#04121a; box-shadow:0 0 18px rgba(34,230,255,.5); }
+  /* 解锁/升级：金边幽灵胶囊（金币语义），hover 染金光 */
+  .hangar-card .act.warn{ background:rgba(10,16,44,.45); border-color:rgba(255,200,80,.55); color:var(--gold); }
+  .hangar-card .act.warn:hover{ border-color:var(--gold); color:#fff; box-shadow:0 0 16px rgba(255,200,80,.45); }
+  /* 底部返回：与主界面「机库」按钮同款幽灵胶囊，补 btn.big 原自带的上间距 */
+  #hangarBackBtn{ margin-top:14px; }
 </style>
 </head>
 <body>
@@ -177,19 +218,27 @@
   <div id="wrap">
     <canvas id="game"></canvas>
 
+  <!-- 过场跳过（手机端按钮；键盘空格/回车亦可） -->
+  <button id="warpSkip" class="hidden">跳过 ▸</button>
+
     <!-- HUD -->
     <div id="hud" class="hidden">
       <div class="hud-top">
-        <div class="score-box"><small>SCORE</small><span class="num" id="scoreNum">0</span><small id="lvInfo" style="color:#ffd76a;font-size:11px;letter-spacing:1px;margin-top:2px"></small></div>
-        <div class="coin-box" id="coinNum"><span class="coin-ic"></span> 0</div>
+        <div class="score-box"><small>SCORE</small><span class="num" id="scoreNum">0</span><div class="coin-box" id="coinNum"><span class="coin-ic"></span> 0</div></div>
+        <div class="lv-box"><small id="lvInfo" style="color:#ffd76a;font-size:12px;letter-spacing:1px"></small></div>
         <div class="stat-right">
-          <button class="btn ghost" id="pauseBtn" style="padding:6px 12px;font-size:12px">⏸ 暂停</button>
+          <button class="btn ghost" id="pauseBtn" style="padding:5px 10px; font-size:11px;">⏸ 暂停</button>
           <div class="lives" id="lives"></div>
           <div class="bar"><i id="hpFill"></i></div>
-          <div class="bar rage"><i id="rageFill"></i></div>
         </div>
       </div>
-      <button id="ultBtn" title="大招：怒气满后释放（Shift / 点击）">🔥</button>
+      <button id="ultBtn" title="大招：怒气满后释放（Shift / 点击）">
+        <svg class="ult-ring" viewBox="0 0 60 60" aria-hidden="true">
+          <circle class="ult-track" cx="30" cy="30" r="26"></circle>
+          <circle class="ult-prog" id="ultProg" cx="30" cy="30" r="26"></circle>
+        </svg>
+        <span class="ult-ic">🔥</span>
+      </button>
     </div>
 
     <!-- Start Screen -->
@@ -198,10 +247,6 @@
       <div class="logo">星际战机</div>
       <div class="card hero">
         <button type="button" class="nick-chip" id="nickChip">飞行员 <b id="nickName">—</b> <span class="dice-ic">✎</span></button>
-        <div class="nick-edit hidden" id="nickEdit">
-          <input id="nick" maxlength="12" placeholder="输入你的代号…" autocomplete="off">
-          <button class="btn dice" id="diceBtn" title="随机昵称">🎲</button>
-        </div>
         <button class="btn start-orb" id="startBtn">开始战斗</button>
         <button class="btn hangar" id="hangarMenuBtn">🛠 机库 / 升级</button>
       </div>
@@ -211,10 +256,25 @@
       </div>
     </div>
 
+    <!-- 昵称修改弹窗 -->
+    <div id="nickModal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-title">修改代号</div>
+        <div class="nick-row">
+          <input id="nick" maxlength="12" placeholder="输入你的代号…" autocomplete="off">
+          <button class="btn dice" id="diceBtn" title="随机昵称">🎲</button>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="nickCancel">取消</button>
+          <button class="btn primary" id="nickSave">保存</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Pause Screen -->
     <div id="pauseScreen" class="screen hidden">
       <div class="logo" style="font-size:34px">已暂停</div>
-      <button class="btn big" id="resumeBtn" style="max-width:220px">继续战斗</button>
+      <button class="btn primary big" id="resumeBtn" style="max-width:220px">继续战斗</button>
       <button class="btn ghost big" id="quitBtn" style="max-width:220px">退出到主菜单</button>
       <div class="hint" style="margin-top:16px">按 <span class="kbd">空格</span> 继续战斗</div>
     </div>
@@ -227,7 +287,7 @@
         <h3>🏆 排行榜 <span class="clear" id="clearBtn">清空</span></h3>
         <ol class="rank" id="rankList"></ol>
       </div>
-      <button class="btn big" id="againBtn" style="max-width:300px">🔄 再来一局</button>
+      <button class="btn primary big" id="againBtn" style="max-width:300px">🔄 再来一局</button>
       <button class="btn ghost big" id="menuBtn" style="max-width:300px">返回主菜单</button>
     </div>
 
@@ -238,7 +298,7 @@
         <div class="coin-box" id="hangarCoins"><span class="coin-ic"></span> 0</div>
       </div>
       <div class="hangar-scroll" id="hangarList"></div>
-      <button class="btn big" id="hangarBackBtn" style="max-width:440px;width:94%">返回主菜单</button>
+      <button class="btn hangar" id="hangarBackBtn" style="max-width:440px;width:94%">返回主菜单</button>
     </div>
     <div id="notify" class="notify"></div>
   </div>
@@ -277,6 +337,10 @@
   function glowFor(rgba){ if(!glowCache[rgba]) glowCache[rgba]=makeGlow(rgba); return glowCache[rgba]; }
   // hex 颜色转 rgba 字符串（供发光精灵；保证 glowFor 能正确解析透明度）
   function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+  // 插值 / 缓动工具（过场动画用）
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function easeOut(t){ return 1-(1-t)*(1-t); }
+  function easeInOut(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
   // Boss 子弹未单独定义样式，统一回退到该默认（粉红能量球）
   const ENEMY_BULLET = { glow:'rgba(255,80,140,0.9)', fill:'#ff5a8c', shape:'orb' };
   function buildSprites(){
@@ -310,6 +374,7 @@
   // ============ DOM ============
   const el = id => document.getElementById(id);
   const startScreen=el('startScreen'), overScreen=el('overScreen'), pauseScreen=el('pauseScreen'), hud=el('hud');
+  const warpSkip=el('warpSkip'); warpSkip.onclick=skipWarp;   // 过场可跳过（手机端按钮 + 键盘空格/回车）
   const hangarScreen=el('hangarScreen'), hangarList=el('hangarList'), hangarCoins=el('hangarCoins'), hangarBackBtn=el('hangarBackBtn'), hangarMenuBtn=el('hangarMenuBtn');
   const nickInput=el('nick'), scoreNum=el('scoreNum'), hpFill=el('hpFill'), livesBox=el('lives');
 
@@ -317,10 +382,16 @@
   const NA=['疾风','银翼','暗焰','雷霆','幻影','苍穹','星陨','赤炎','寒鸦','龙渊','夜枭','破晓','烈阳','虚空','钢铁','极光'];
   const NB=['射手','游侠','舰长','猎鹰','先锋','刺客','守望','风暴','骑士','战狼','特工','王牌'];
   const randNick=()=> NA[Math.random()*NA.length|0]+NB[Math.random()*NB.length|0]+(Math.random()*90+10|0);
-  // 主界面昵称：降级为可点胶囊（Hero 布局），点开才内联编辑
-  const nickChip=el('nickChip'), nickEdit=el('nickEdit'), nickNameEl=el('nickName');
+  // 主界面昵称：可点胶囊，点击弹出修改弹窗（不直接在主界面显示输入框）
+  const nickChip=el('nickChip'), nickModal=el('nickModal'), nickNameEl=el('nickName');
+  const nickCancel=el('nickCancel'), nickSave=el('nickSave');
   function syncNick(){ nickNameEl.textContent = (nickInput.value.trim()||'飞行员'); }
-  nickChip.onclick=()=>{ nickEdit.classList.toggle('hidden'); if(!nickEdit.classList.contains('hidden')){ nickInput.focus(); nickInput.select(); } };
+  function openNickModal(){ nickModal.classList.remove('hidden'); nickInput.focus(); nickInput.select(); }
+  function closeNickModal(){ nickModal.classList.add('hidden'); }
+  function saveNick(){ syncNick(); closeNickModal(); }
+  nickChip.onclick=openNickModal;
+  nickCancel.onclick=closeNickModal;
+  nickSave.onclick=saveNick;
   nickInput.addEventListener('input', syncNick);
   el('diceBtn').onclick=()=>{
     nickInput.value=randNick();                                            // 原功能：随机昵称（保留）
@@ -361,9 +432,12 @@
   let coinsRun=0;   // 本局已拾取金币（gameOver 结算入 save.coins）
 
   // ============ Game State ============
-  const State={ MENU:'menu', PLAY:'play', PAUSE:'pause', OVER:'over', HANGAR:'hangar' };
+  const State={ MENU:'menu', PLAY:'play', PAUSE:'pause', OVER:'over', HANGAR:'hangar', WARP:'warp' };
   let state=State.MENU;
   let player, bullets, enemies, eBullets, particles, stars, planets, meteors, motes;
+  let warpT=0, warpParts=[], warpStreaks=[], hx=0, hy=0;   // 过场动画（黑洞跳跃）状态
+  const WARP={ total:220, holeOpen:34, inEnd:130, flashEnd:165, outEnd:205 };  // 各阶段帧位（60Hz 固定步长，≈3.7s，放慢）
+  const WARP_LINGER=150;   // Boss 爆出道具/金币后的「拾取宽限」帧（≈2.5s），到期或拾完才进过场
   let score, maxHP, hp, lives, tick=0, spawnTimer, diffMul, playerName, invuln, invincT=0, meteorTimer=0;
   let powerups=[], coins=[], spreadT=0, wingmen=[], wingBoostT=0, lastStream=1, toastT=0, toastText='', laserPhase=0;
   let rage=0, ultActive=false, ultT=0;   // 大招：怒气值 / 是否释放中 / 剩余帧
@@ -468,6 +542,10 @@
         { id:'spider',     name:'蛛皇',      color:'#5fe06a', shoot:bossShootSpider,     draw:bossDrawSpider,      w:160,h:104, summon:true },
         { id:'dreadnought',name:'无畏舰',    color:'#4d8bff', shoot:bossShootDreadnought,draw:bossDrawDreadnought, w:184,h:96 },
         { id:'phoenix',    name:'凤凰',      color:'#ffb13b', shoot:bossShootPhoenix,    draw:bossDrawPhoenix,     w:172,h:110 },
+        { id:'frost',     name:'霜噬者',    color:'#aee9ff', shoot:bossShootFrost,     draw:bossDrawFrost,      w:120,h:92 },
+        { id:'thunder',   name:'雷狱裁决',  color:'#ffe14d', shoot:bossShootThunder,   draw:bossDrawThunder,    w:128,h:96 },
+        { id:'abyss',     name:'噬渊母巢',  color:'#39e0c8', shoot:bossShootAbyss,     draw:bossDrawAbyss,      summon:true, w:168,h:104 },
+        { id:'void',      name:'终焉·虚空之主', color:'#ff3bd0', shoot:bossShootVoid,      draw:bossDrawVoid,       summon:true, w:200,h:120, phase:[0.55,0.28] },
       ],
     },
     powerups: {
@@ -549,6 +627,7 @@
   };
 
   let level, kills, killQuota, boss, bannerT, won, currentTheme=null;
+  let bossCleared=false, warpDelay=0;   // Boss 死亡后：停留拾取掉落物，再进过场
   // 分数驱动的难度进度 0→1
   const prog=()=> Math.max( Math.min((score||0)/CONFIG.difficulty.scoreCap, 1), Math.min((level||1)/CONFIG.levels.max, 1) );
   const D = CONFIG.difficulty;   // 难度配置简写
@@ -616,7 +695,7 @@
     bullets=[]; enemies=[]; eBullets=[]; particles=[]; powerups=[]; coins=[]; spreadT=0; wingBoostT=0; lastStream=1; toastT=0; coinsRun=0;
     regenWingmen();   // 按当前装备型号生成 wingCount 架僚机（未拥有则不生成）
     score=0; maxHP=P.maxHP; hp=P.maxHP; lives=P.startLives; tick=0; spawnTimer=0; diffMul=1; invuln=0; invincT=0; rage=0; ultActive=false; ultT=0; laserPhase=0;
-    boss=null; won=false;
+    boss=null; won=false; bossCleared=false;
     startLevel(1);
     initStars();
     updateHUD();
@@ -629,6 +708,7 @@
   let cheatOn=false;       // 主界面输入 hhcccc 解锁，本会话内有效
   let cheatBuf='';         // 按键缓冲（仅记录主界面输入，不拦截原输入）
   window.addEventListener('keydown',e=>{
+    if(state===State.WARP){ if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); skipWarp(); } return; }
     const tag=(e.target&&e.target.tagName)||'';
     const typing=(tag==='INPUT'||tag==='TEXTAREA');
     if(e.code==='Space'){
@@ -662,7 +742,7 @@
   canvas.addEventListener('touchend',e=>{ pointerDown=false; e.preventDefault(); },{passive:false});
 
   // ============ Screen flow ============
-  function show(scr){ [startScreen,overScreen,pauseScreen,hangarScreen].forEach(s=>s.classList.add('hidden')); if(scr){ if(scr===startScreen && nickEdit) nickEdit.classList.add('hidden'); scr.classList.remove('hidden'); } }
+  function show(scr){ [startScreen,overScreen,pauseScreen,hangarScreen].forEach(s=>s.classList.add('hidden')); if(scr){ if(scr===startScreen) closeNickModal(); scr.classList.remove('hidden'); } }
   function startGame(){
     playerName = (nickInput.value.trim()||randNick()).slice(0,12);
     resetGame();
@@ -692,7 +772,7 @@
   el('resumeBtn').onclick=togglePause;
   el('pauseBtn').onclick=togglePause;
   const ultBtnEl=el('ultBtn'); ultBtnEl.onclick=triggerUltimate;
-  nickInput.addEventListener('keydown',e=>{ if(e.key==='Enter') startGame(); });
+  nickInput.addEventListener('keydown',e=>{ if(e.key==='Enter') saveNick(); });
 
   // ============ Hangar / Shop ============
   function openHangar(){ state=State.HANGAR; hud.classList.add('hidden'); hangarBackBtn.textContent = '返回主菜单'; show(hangarScreen); renderHangar(); }
@@ -988,6 +1068,33 @@
     for(let i=0;i<n;i++){ const base=Math.PI/2+(i-(n-1)/2)*0.2; const ang=base+Math.sin(b.spiral+i)*0.25; eBullets.push({x:b.x,y:b.y+10,w:8,h:12,vx:Math.cos(ang)*s,vy:Math.sin(ang)*s,dmg:17, glow:b.glow, fill:b.fill, shape:'orb'}); }
     if(b.phase>=2){ for(const sx of [-1,1]) for(let i=0;i<3;i++){ const ang=Math.PI/2+(sx>0?0.3:-0.3)+i*0.12; eBullets.push({x:b.x+sx*b.w*0.4,y:b.y,w:7,h:7,vx:Math.cos(ang)*s*0.9,vy:Math.sin(ang)*s*0.9,dmg:15, glow:b.glow, fill:b.fill, shape:'orb'}); } }
   }
+  // ---- 新增 4 原型弹幕（霜噬者 / 雷狱裁决 / 噬渊母巢 / 终焉·虚空之主）----
+  function bossShootFrost(b){
+    const s=b.bSpd*(1+b.phase*0.12);
+    const n=12; b.phaseRot+=0.25; const off=b.phaseRot;
+    for(let i=0;i<n;i++){ const ang=off+i/n*Math.PI*2; eBullets.push({x:b.x,y:b.y+10,w:7,h:7,vx:Math.cos(ang)*s*0.85,vy:Math.sin(ang)*s*0.85,dmg:15, glow:b.glow, fill:b.fill, shape:'orb'}); }
+    if(b.phase>=1){ const a=Math.atan2(player.y-b.y, player.x-b.x); for(const da of [-0.18,0,0.18]) eBullets.push({x:b.x,y:b.y,w:8,h:8,vx:Math.cos(a+da)*s*1.1,vy:Math.sin(a+da)*s*1.1,dmg:17, glow:b.glow, fill:b.fill, shape:'orb'}); }
+  }
+  function bossShootThunder(b){
+    const s=b.bSpd*(1+b.phase*0.12);
+    const a=Math.atan2(player.y-b.y, player.x-b.x);
+    const spread=b.phase>=1?5:3;
+    for(let k=-((spread-1)/2);k<=((spread-1)/2);k++){ const ang=a+k*0.16; eBullets.push({x:b.x,y:b.y+24,w:8,h:10,vx:Math.cos(ang)*s*1.3,vy:Math.sin(ang)*s*1.3,dmg:17, glow:b.glow, fill:b.fill, shape:'bolt'}); }
+    if(b.phase>=2){ const col=(Math.random()*W)|0; for(let i=0;i<3;i++) eBullets.push({x:col,y:-10,w:6,h:14,vx:0,vy:s*1.4,dmg:16, glow:b.glow, fill:b.fill, shape:'bolt'}); }
+  }
+  function bossShootAbyss(b){
+    const s=b.bSpd*(1+b.phase*0.12);
+    const a=Math.atan2(player.y-b.y, player.x-b.x);
+    eBullets.push({x:b.x,y:b.y+20,w:14,h:14,vx:Math.cos(a)*s*0.6,vy:Math.sin(a)*s*0.6,dmg:20, glow:b.glow, fill:b.fill, shape:'orb'});
+    if(b.phase>=1){ for(const da of [-0.3,0.3]) eBullets.push({x:b.x,y:b.y+10,w:8,h:8,vx:Math.cos(a+da)*s*0.9,vy:Math.sin(a+da)*s*0.9,dmg:15, glow:b.glow, fill:b.fill, shape:'orb'}); }
+  }
+  function bossShootVoid(b){
+    const s=b.bSpd*(1+b.phase*0.12);
+    const n=10+b.phase*3; b.phaseRot+=0.28; const off=b.phaseRot;
+    for(let i=0;i<n;i++){ const ang=off+i/n*Math.PI*2; eBullets.push({x:b.x,y:b.y,w:8,h:8,vx:Math.cos(ang)*s*0.9,vy:Math.sin(ang)*s*0.9,dmg:16, glow:b.glow, fill:b.fill, shape:'orb'}); }
+    if(b.phase>=1){ const a=Math.atan2(player.y-b.y, player.x-b.x); for(const da of [-0.22,0,0.22]) eBullets.push({x:b.x,y:b.y,w:9,h:9,vx:Math.cos(a+da)*s*1.2,vy:Math.sin(a+da)*s*1.2,dmg:18, glow:b.glow, fill:b.fill, shape:'orb'}); }
+    if(b.phase>=2){ const a2=Math.atan2(player.y-b.y, player.x-b.x)+Math.PI; for(const da of [-0.22,0,0.22]) eBullets.push({x:b.x,y:b.y,w:9,h:9,vx:Math.cos(a2+da)*s*1.2,vy:Math.sin(a2+da)*s*1.2,dmg:18, glow:b.glow, fill:b.fill, shape:'orb'}); }
+  }
   function updateBoss(){
     const b=boss, BC=CONFIG.boss;
     if(b.entering){ b.y+=2; if(b.y>=BC.enterY) b.entering=false; return; }
@@ -1033,9 +1140,9 @@
       spawnPowerup(b.x, b.y, bt);
       const total=Math.max(20, Math.round(b.score/4));   // Boss 掉一大笔金币
       for(let i=0;i<10;i++) spawnCoin(b.x+(Math.random()*120-60), b.y+(Math.random()*40-20), Math.max(2, Math.round(total/10)));
-      boss=null; updateHUD();
+      boss=null; eBullets.length=0; updateHUD();   // 清掉 Boss 残留弹幕，保证「拾取宽限」期间安全
       if(level>=CONFIG.levels.max){ won=true; gameOver(); }
-      else { startLevel(level+1); }   // 通关不弹机库，连续进入下一关；机库仅主菜单可进
+      else { bossCleared=true; warpDelay=WARP_LINGER; }   // 不立即过场：先停留让玩家拾取掉落的金币/道具，再进黑洞跳跃
     }
   }
 
@@ -1045,6 +1152,9 @@
     diffMul = 1 + prog()*D.enemySpeedK;   // 难度倍率（分数+关卡双驱动）：移速/敌弹/星空滚动沿用
     if(bannerT>0) bannerT--;
     if(toastT>0) toastT--;
+    // Boss 清场后的「拾取宽限」：掉落的金币/道具未拾完不进过场；超时也强制进入
+    // 仅触发过场判定，玩家移动与拾取仍由下方常规逻辑处理
+    if(bossCleared && (--warpDelay<=0 || (powerups.length===0 && coins.length===0))) startWarp();
     const sl=streamLevel();
     if(sl>lastStream){ lastStream=sl; showToast('🔥 火力提升至 '+sl+' 束'); }
 
@@ -1144,9 +1254,9 @@
     // spawn / 关卡推进
     if(boss){
       updateBoss();
-    } else if(kills>=killQuota){
+    } else if(!bossCleared && kills>=killQuota){
       if(enemies.length===0) spawnBoss();   // 清完场再出 Boss
-    } else {
+    } else if(!bossCleared){
       spawnTimer--;
       if(spawnTimer<=0){ spawnEnemy(); spawnTimer=Math.max(D.spawnMin, Math.round(D.spawnBase-prog()*D.spawnDecay)); }
     }
@@ -1486,6 +1596,47 @@
     ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo( b.w*0.40,-b.h*0.20-flap*b.h,  b.w*0.5, b.h*0.10); ctx.quadraticCurveTo( b.w*0.30, b.h*0.16, 0, b.h*0.22); ctx.closePath(); ctx.fill();
     if(b.flash<=0){ ctx.fillStyle='#fff2c8'; ctx.beginPath(); ctx.moveTo(0,-b.h*0.20); ctx.lineTo(-6,-b.h*0.34); ctx.lineTo(6,-b.h*0.34); ctx.closePath(); ctx.fill(); }
   }
+  // ---- 新增 4 原型舰体造型 ----
+  function bossDrawFrost(b){            // 霜噬者：尖刺六边形晶体
+    ctx.beginPath();
+    for(let i=0;i<6;i++){ const a=i*Math.PI/3 - Math.PI/2, r=b.w*0.5; const x=Math.cos(a)*r, y=Math.sin(a)*r*0.92; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+    ctx.closePath(); ctx.fill();
+    if(b.flash<=0){ ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=2; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,-b.h*0.4); ctx.lineTo(0,b.h*0.4); ctx.moveTo(-b.w*0.32,0); ctx.lineTo(b.w*0.32,0); ctx.stroke(); }
+  }
+  function bossDrawThunder(b){         // 雷狱裁决：棱角闪电楔簇
+    ctx.beginPath();
+    ctx.moveTo(0,-b.h*0.5);
+    ctx.lineTo(-b.w*0.5, b.h*0.10);
+    ctx.lineTo(-b.w*0.18, b.h*0.05);
+    ctx.lineTo(-b.w*0.34, b.h*0.5);
+    ctx.lineTo(0, b.h*0.22);
+    ctx.lineTo( b.w*0.34, b.h*0.5);
+    ctx.lineTo( b.w*0.18, b.h*0.05);
+    ctx.lineTo( b.w*0.5, b.h*0.10);
+    ctx.closePath(); ctx.fill();
+    if(b.flash<=0){ ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=2; ctx.stroke(); }
+  }
+  function bossDrawAbyss(b){            // 噬渊母巢：不规则脑巢团 + 摆动触手
+    const sway=Math.sin(tick*0.06)*5;
+    ctx.strokeStyle = b.flash>0 ? '#ffffff' : 'rgba(10,40,35,.9)';
+    ctx.lineWidth=5; ctx.lineCap='round';
+    for(let i=0;i<5;i++){ const ay=-b.h*0.10 + i*b.h*0.18;
+      ctx.beginPath(); ctx.moveTo(-b.w*0.10, ay); ctx.lineTo(-b.w*0.30, ay-sway+i*2); ctx.lineTo(-b.w*0.5, ay+b.h*0.08); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo( b.w*0.10, ay); ctx.lineTo( b.w*0.30, ay-sway+i*2); ctx.lineTo( b.w*0.5, ay+b.h*0.08); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.ellipse(0,0, b.w*0.34, b.h*0.42, 0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, b.h*0.12, b.w*0.20, b.h*0.22, 0,0,Math.PI*2); ctx.fill();
+    if(b.flash<=0){ ctx.fillStyle='#7ffec8'; ctx.beginPath(); ctx.arc(-b.w*0.08,b.h*0.10,4,0,7); ctx.arc(b.w*0.08,b.h*0.10,4,0,7); ctx.fill(); }
+  }
+  function bossDrawVoid(b){             // 终焉·虚空之主：巨型暗物质球 + 吸积盘
+    const pulse=6+Math.sin(tick*0.10)*4;
+    ctx.beginPath(); ctx.arc(0,0, b.w*0.42, 0, Math.PI*2); ctx.fill();          // 暗物质球
+    ctx.strokeStyle='rgba(255,255,255,.28)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0, b.w*0.52, 0, Math.PI*2); ctx.stroke();   // 吸积盘
+    if(b.flash<=0){ ctx.fillStyle='rgba(255,255,255,.22)'; ctx.beginPath(); ctx.arc(0,0, b.w*0.30, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(0,0, pulse, 0, Math.PI*2); ctx.fill(); }
+  }
   function drawBoss(){
     const b=boss;
     ctx.save(); ctx.translate(b.x,b.y);
@@ -1532,19 +1683,23 @@
     ctx.restore();
     // Boss 血条 + 阶段标记（整体下移到 HUD 下方，避免与顶部总分/暂停重叠）
     const bw=W-80, by=94, bh=12;
-    // 名牌
+    // 名牌（白字 + 本机色辉光，去掉原粉红）
     ctx.textAlign='center'; ctx.font='800 14px "Segoe UI","PingFang SC",sans-serif';
-    ctx.fillStyle=enrage?'#ff8da3':'#ffd0da'; ctx.shadowColor=enrage?'#ff2e55':'#7a2e6b'; ctx.shadowBlur=10;
+    ctx.fillStyle = enrage ? '#ffd0d0' : '#eaf6ff';
+    ctx.shadowColor = cs; ctx.shadowBlur = 12;
     ctx.fillText(b.name + (b.phase>0?('  · PHASE '+(b.phase+1)):''), W/2, 86);
     ctx.shadowBlur=0;
-    // 血条底
-    ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fillRect(40,by,bw,bh);
+    // 血条：玻璃底 + 本机色填充 + 青色细边（统一青金玻璃风）
+    ctx.fillStyle='rgba(8,12,30,.55)'; ctx.fillRect(40,by,bw,bh);
+    const frac=Math.max(0,b.hp/b.maxhp);
     const grd=ctx.createLinearGradient(40,0,40+bw,0);
-    grd.addColorStop(0, enrage?'#ff2e55':'#ff4d6d'); grd.addColorStop(1,'#ffb14d');
-    ctx.fillStyle=grd; ctx.fillRect(40,by,bw*Math.max(0,b.hp/b.maxhp),bh);
-    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.strokeRect(40,by,bw,bh);
+    grd.addColorStop(0, cs); grd.addColorStop(0.85, cs); grd.addColorStop(1, '#ffffff');
+    ctx.save(); ctx.shadowColor=cs; ctx.shadowBlur=8;
+    ctx.fillStyle=grd; ctx.fillRect(40,by,bw*frac,bh);
+    ctx.restore();
+    ctx.strokeStyle='rgba(34,230,255,.4)'; ctx.lineWidth=1; ctx.strokeRect(40,by,bw,bh);
     // 阶段刻度线 (66% / 33%)
-    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(40+bw*0.66,by); ctx.lineTo(40+bw*0.66,by+bh); ctx.moveTo(40+bw*0.33,by); ctx.lineTo(40+bw*0.33,by+bh); ctx.stroke();
   }
 
@@ -1634,10 +1789,12 @@
     ctx.fillStyle='rgba(255,255,255,'+flick+')'; ctx.fillRect(x-3,0,6,player.y);
     ctx.restore();
   }
+  const ULT_RING_C = 2*Math.PI*26;   // 大招圆环周长（r=26），用于怒气进度
   function syncRage(){
     const U=CONFIG.player.ultimate; if(!U.enabled) return;
     const frac=Math.max(0,Math.min(1, rage/U.max));
-    const f=el('rageFill'); if(f) f.style.width=(frac*100)+'%';
+    // 圆环进度：用 dashoffset 表示怒气积累（2π·26≈163.36）
+    const prog=el('ultProg'); if(prog) prog.style.strokeDashoffset=(ULT_RING_C*(1-frac)).toFixed(2);
     const ready=frac>=1 && !ultActive;
     if(ultBtnEl) ultBtnEl.classList.toggle('ready', ready);
   }
@@ -1814,6 +1971,96 @@
     ctx.restore();
   }
 
+  // ============ 过场动画：黑洞跳跃（WARP 状态） ============
+  function newStreak(){                 // 一条从屏幕边缘飞向黑洞的吸入条纹
+    const edge=Math.random(); let x,y;
+    if(edge<0.5){ x=Math.random()*W; y=-20; }
+    else { x=Math.random()<0.5?-20:W+20; y=Math.random()*H*0.5; }
+    return { x, y };
+  }
+  function startWarp(){
+    state=State.WARP; bossCleared=false;
+    warpT=0; warpParts=[]; warpStreaks=[];
+    hx=W/2; hy=H*0.20;               // 黑洞位于上方
+    hud.classList.add('hidden'); warpSkip.classList.remove('hidden');
+    for(let i=0;i<46;i++) warpParts.push({ a:Math.random()*Math.PI*2, r:30+Math.random()*120, sp:0.02+Math.random()*0.05, sz:1+Math.random()*2.2 });
+    for(let i=0;i<22;i++) warpStreaks.push(newStreak());
+  }
+  function updateWarp(){
+    tick++;
+    warpT++;
+    for(const p of warpParts){ p.a+=p.sp; p.r-=0.6; if(p.r<6){ p.r=30+Math.random()*120; p.a=Math.random()*Math.PI*2; } }
+    const acc=(warpT>WARP.holeOpen)?6:2;     // 开孔后吸入加速
+    for(const s of warpStreaks){
+      const dx=hx-s.x, dy=hy-s.y, d=Math.hypot(dx,dy)||1;
+      const sp=4+acc; s.x+=dx/d*sp; s.y+=dy/d*sp;
+      if(d<14) Object.assign(s, newStreak());
+    }
+    if(warpT>=WARP.total) endWarp();
+  }
+  function endWarp(){
+    warpSkip.classList.add('hidden');
+    hud.classList.remove('hidden');
+    startLevel(level+1);                // 清残留 + 进入下一关（含过关横幅）
+    state=State.PLAY;
+  }
+  function skipWarp(){ if(state===State.WARP) endWarp(); }
+  function drawBlackHole(x,y,sc,t){
+    if(sc<=0) return;
+    const R=70*sc;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(t*0.05);
+    for(const p of warpParts){
+      const px=Math.cos(p.a)*p.r*sc, py=Math.sin(p.a)*p.r*sc;
+      ctx.globalAlpha=0.5*(p.r/150);
+      ctx.fillStyle = (p.r>70)?'#ffd76a':'#7ab8ff';
+      ctx.beginPath(); ctx.arc(px,py,p.sz,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.save();
+    const g=ctx.createRadialGradient(x,y,0, x,y,R);
+    g.addColorStop(0,'#000000');
+    g.addColorStop(0.6,'rgba(8,6,20,0.95)');
+    g.addColorStop(0.78,'rgba(120,90,255,0.55)');
+    g.addColorStop(1,'rgba(120,90,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=0.8; ctx.strokeStyle='rgba(150,120,255,0.9)'; ctx.lineWidth=3*sc;
+    ctx.beginPath(); ctx.arc(x,y,R*0.82,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  function drawWarpShip(alpha){
+    const T=warpT; let x,y,sc;
+    if(T<WARP.holeOpen){ x=W/2; y=H-30; sc=1; }                                  // 先在底部可见停留（黑洞张开）
+    else if(T<WARP.inEnd){ const k=easeInOut((T-WARP.holeOpen)/(WARP.inEnd-WARP.holeOpen)); x=lerp(W/2,hx,k); y=lerp(H-30,hy,k); sc=lerp(1,0.25,k); }
+    else if(T<WARP.flashEnd){ const k=(T-WARP.inEnd)/(WARP.flashEnd-WARP.inEnd); x=hx; y=hy; sc=lerp(0.25,0,k); }
+    else if(T<WARP.outEnd){ const k=easeInOut((T-WARP.flashEnd)/(WARP.outEnd-WARP.flashEnd)); x=W/2; y=lerp(H+50,H-120,k); sc=lerp(0.25,1,k); }
+    else { x=W/2; y=H-120; sc=1; }
+    if(T>WARP.holeOpen && T<WARP.outEnd){   // 向上运动（吸入/钻出）均画向下拖尾，强化"飞入"观感
+      ctx.save(); ctx.globalAlpha=alpha*0.55; ctx.strokeStyle='rgba(180,230,255,0.7)'; ctx.lineWidth=2;
+      for(let i=0;i<5;i++){ const ox=(i-2)*10; const ty=y+sc*34; ctx.beginPath(); ctx.moveTo(x+ox, ty); ctx.lineTo(x+ox, ty+24*sc); ctx.stroke(); }
+      ctx.restore();
+    }
+    player.x=x; player.y=y;
+    ctx.save(); ctx.globalAlpha=alpha; ctx.translate(x,y); ctx.scale(sc,sc); ctx.translate(-x,-y); drawPlayer(); ctx.restore();
+  }
+  function drawWarp(){
+    ctx.clearRect(0,0,W,H);
+    drawSpace();
+    const T=warpT;
+    let holeScale=0, flash=0, layerAlpha=1;
+    if(T<WARP.holeOpen) holeScale=easeOut(T/WARP.holeOpen);
+    else if(T<WARP.flashEnd) holeScale = (T<WARP.inEnd)?1: Math.max(0, 1-(T-WARP.inEnd)/(WARP.flashEnd-WARP.inEnd));
+    else holeScale=0;
+    if(T>=WARP.inEnd && T<WARP.flashEnd){ const k=(T-WARP.inEnd)/(WARP.flashEnd-WARP.inEnd); flash=Math.sin(k*Math.PI); }
+    if(T>WARP.outEnd) layerAlpha=Math.max(0, 1-(T-WARP.outEnd)/(WARP.total-WARP.outEnd));
+    // 吸入条纹
+    ctx.save(); ctx.globalAlpha=layerAlpha; ctx.strokeStyle='rgba(180,210,255,0.5)'; ctx.lineWidth=2;
+    for(const s of warpStreaks){ const dx=hx-s.x, dy=hy-s.y, d=Math.hypot(dx,dy)||1; const tx=s.x-dx/d*22, ty=s.y-dy/d*22; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(tx,ty); ctx.stroke(); }
+    ctx.restore();
+    drawBlackHole(hx, hy, holeScale, T);
+    drawWarpShip(layerAlpha);
+    if(flash>0){ ctx.save(); ctx.globalAlpha=flash*0.9; ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.restore(); }
+  }
+
   // ============ Loop ============
   let lastT=0, acc=0;                 // 固定步长累加器：模拟以 60Hz 推进，与屏幕刷新率解耦
   function loop(now){
@@ -1825,6 +2072,11 @@
       const STEP=1000/60; let steps=0;
       while(acc>=STEP && steps<6){ update(); acc-=STEP; steps++; }
       draw();
+    } else if(state===State.WARP){           // 过场：黑洞跳跃（固定步长推进）
+      acc += Math.min(dtMs, 100);
+      const STEP=1000/60; let steps=0;
+      while(acc>=STEP && steps<6){ updateWarp(); acc-=STEP; steps++; }
+      drawWarp();
     } else if(state===State.PAUSE||state===State.OVER){ draw(); }
     else { // menu / boot: idle deep-space
       if(!stars) initStars();
