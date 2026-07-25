@@ -719,7 +719,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         { id:'hornet', name:'双体黄蜂', desc:'虫族前锋单位。三段体结构灵活，双翅扇动干扰瞄准，尾针穿透力强。', color:'#ff7b3d', w:140,h:90, draw:bossDrawHornet,
           patterns:{0:[{fn:'ring',p:{count:6,speed:.8,dmg:15,clockwise:true}},{fn:'ring',p:{count:6,speed:.8,dmg:15,clockwise:false}}],1:[{fn:'aimedFan',p:{count:5,spread:.14,dmg:17}}],2:[{fn:'downFan',p:{count:7,spread:.20,dmg:16}},{fn:'ring',p:{count:14,speed:1,dmg:16}}]} },
         // == 关4：蜘蛛女王 —— 首次引入召唤 ==
-        { id:'arachnid', name:'蛛母女王', desc:'虫巢领主，腹部孵化小型猎手蜘蛛。八条折线关节腿覆盖前方扇形区域。', color:'#5fe06a', w:170,h:110, summon:true, draw:bossDrawArachnid,
+        { id:'arachnid', name:'蛛母女王', desc:'大型褐色甲壳蛛母，腹部两侧伸出6条刚性折线腿，扇形分布覆盖战场。6只红色复眼，擅召唤小型猎手蜘蛛。', color:'#5fe06a', w:170,h:110, summon:true, draw:bossDrawArachnid,
           patterns:{0:[{fn:'ring',p:{count:8,speed:.7,dmg:15}},{fn:'aimedFan',p:{count:3,spread:.16,dmg:16}}],1:[{fn:'spiral',p:{count:4,speed:.7,dmg:15}},{fn:'aimedSpread',p:{offsets:[-.25,0,.25],speed:.9,dmg:17}}],2:[{fn:'rain',p:{count:3,dmg:16}},{fn:'spiral',p:{count:6,speed:.8,dmg:15}},{fn:'ring',p:{count:12,speed:.9,dmg:16}}]} },
         // == 关5：梯形战舰 —— 地形压制型 ==
         { id:'dreadnought', name:'无畏战舰', desc:'联邦主力重型巡洋舰。多层桥楼、五门侧舷炮，火力覆盖范围极广。', color:'#5b8fbf', w:190,h:100, draw:bossDrawDreadnought,
@@ -746,7 +746,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         { id:'bulwark', name:'壁垒', desc:'重型六边形堡垒，两侧护盾发生器可间歇展开能量屏障抵御攻击。突破窗口期至关重要。', color:'#4488ff', w:180,h:120, draw:bossDrawBulwark,
           patterns:{0:[{fn:'downFan',p:{count:5,spread:.22,dmg:19}},{fn:'heavyOrb',p:{dmg:22,w:14,h:14,speed:.5}}],1:[{fn:'aimedFan',p:{count:5,spread:.14,dmg:21}},{fn:'ring',p:{count:8,speed:.7,dmg:19}},{fn:'sideBeams',p:{count:3,spd:1.2,dmg:20}}],2:[{fn:'rain',p:{count:5,dmg:21}},{fn:'ring',p:{count:14,speed:.9,dmg:20}},{fn:'heavyOrb',p:{dmg:24,w:16,h:16,speed:.5}},{fn:'crossFire',p:{count:4,spread:.20,dmg:22}}]} },
         // == 关13：双子 —— 双核心分离型（链状能量连接） ==
-        { id:'twins', name:'双子', desc:'两个独立核心以链状能量连接，左右分离摆动。共享血量池，双倍火力压制。', color:'#44ff88', w:130,h:90, draw:bossDrawTwins,
+        { id:'twins', name:'双子', desc:'被神秘科学家改造为武器的双子星系统——右热核（橙红）与左冷核（青蓝）以高能能量束连接，外围武器控制环束缚。分离式双核协同，共享血量池，双倍火力压制。', color:'#44ff88', w:130,h:90, draw:bossDrawTwins,
           patterns:{0:[{fn:'aimedFan',p:{count:3,spread:.18,dmg:19}},{fn:'aimedFan',p:{count:3,spread:.18,dmg:19}}],1:[{fn:'spiral',p:{count:4,speed:.8,dmg:20}},{fn:'spiral',p:{count:4,speed:.8,dmg:20,clockwise:false}}],2:[{fn:'ring',p:{count:8,speed:.9,dmg:21}},{fn:'ring',p:{count:8,speed:.9,dmg:21}}]} },
         // == 关14：魔镜 —— 镜面反射型（菱形镜面+反射棱镜） ==
         { id:'mirror', name:'魔镜', desc:'多面镜面核心，以棱镜折射光线的原理进行攻击。反射护盾开启时，一切火力都会被反弹。', color:'#ffcc00', w:170,h:110, draw:bossDrawMirror,
@@ -2036,43 +2036,54 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx.restore();
   }
 
-  // == 关4：蛛母女王 — 弧形蜘蛛腿 + 8眼 + 腹纹 ==
+  // == 关4：蛛母女王 — 褐色甲壳 + 6条俯视刚性腿（连在身体上）+ 6眼 ==
   function bossDrawArachnid(b){
-    const cs=CONFIG.boss.archs[b.arch].color, e=b.phase>=2;
-    ctx.save(); ctx.translate(b.x,b.y); ctx.shadowColor=cs; ctx.shadowBlur=e?40:26;
-    const g=bossGradient(b,cs);
-    const hw=b.w/2, hh=b.h/2, sw=tick*0.03;
-    // 腹部（大圆）
-    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,10,hw*0.28,hh*0.28,0,0,Math.PI*2); ctx.fill();
-    // 头胸（小圆）
-    ctx.beginPath(); ctx.ellipse(0,-16,hw*0.20,hh*0.18,0,0,Math.PI*2); ctx.fill();
-    // 8条弧形蜘蛛腿 — 紧凑三段弧，模拟真实足肢比例
+    const e=b.phase>=2;
+    ctx.save(); ctx.translate(b.x,b.y);
+    const hw=b.w/2, hh=b.h/2;
+    // 褐色系躯体渐变
+    const brownGr=ctx.createLinearGradient(0,-hh,0,hh);
+    brownGr.addColorStop(0,'#8B5A2B'); brownGr.addColorStop(.5,'#5C3A1E'); brownGr.addColorStop(1,'#3E2510');
+    const legCol='#4A2C14', glowCol='#cc9966';
+    // —— 先画腿（在身体下方），从腹部两侧伸出 ——
     if(b.flash<=0){
-      for(let i=0;i<8;i++){
-        const s=i<4?-1:1, idx=i<4?i:7-i, ph=sw+idx*0.6;
-        const bx=s*(7+idx*3), by=-12+idx*4;                // 根沿头胸圆周发散（内→外：x=±7→±16, y=-12→0）
-        const wv=Math.sin(ph)*5, wv2=Math.sin(ph+1.2)*4;     // 小幅度柔摆
-        // coxa→knee：短弧向外（蜘蛛膝向上拱）
-        const kx=bx+s*(20+wv), ky=by+12+wv2;
-        // knee→ankle：长弧向下弯
-        const ax=kx+s*(15-wv), ay=ky+18+wv2;
-        // ankle→foot：短弧触地
-        const fx=ax+s*(8+wv*0.5), fy=ay+12;
-        ctx.strokeStyle=cs; ctx.lineWidth=3.2-idx*0.22; ctx.shadowColor=cs; ctx.shadowBlur=3;
-        ctx.beginPath(); ctx.moveTo(bx,by);
-        ctx.quadraticCurveTo(bx+s*10, by+5, kx,ky);
-        ctx.quadraticCurveTo(kx-s*4, ky+6, ax,ay);
-        ctx.quadraticCurveTo(ax+s*3, ay+4, fx,fy);
-        ctx.stroke();
-        ctx.fillStyle=cs; ctx.beginPath(); ctx.arc(fx,fy,2.2-idx*0.15,0,7); ctx.fill();
+      const abR=hw*0.28;  // 腹部半径（≈24px），腿根对齐腹部边缘
+      for(let side of [-1,1]){
+        for(let leg=0;leg<3;leg++){
+          // 根部位于腹部左右两侧，沿腹部纵向均匀分布（上→下）
+          const rootX=side*abR, rootY=10-8+leg*8;
+          // 方向角（从水平轴算起）：前=-35°（向前伸）、中=0°（横伸）、后=+45°（向后伸）
+          const dir=[-0.60, 0.0, 0.80][leg];
+          // 刚性三角波
+          const tri=Math.asin(Math.sin(tick*0.04+leg*1.3))*8;
+          // 股节（根→膝），加大尺寸
+          const fLen=16+leg*3;
+          const kx=rootX+side*fLen*Math.cos(dir)+side*tri*0.2;
+          const ky=rootY+fLen*Math.sin(dir)+tri*0.2;
+          // 胫节（膝→脚），略外翻
+          const tLen=17+leg*3;
+          const tDir=dir+0.12;
+          const fx=kx+side*tLen*Math.cos(tDir)+side*tri*0.3;
+          const fy=ky+tLen*Math.sin(tDir)+tri*0.1;
+          ctx.strokeStyle=legCol; ctx.lineWidth=4-leg*0.4; ctx.shadowColor=glowCol; ctx.shadowBlur=2;
+          ctx.beginPath(); ctx.moveTo(rootX,rootY);
+          ctx.lineTo(kx,ky); ctx.lineTo(fx,fy);
+          ctx.stroke();
+          // 脚端小钩
+          ctx.fillStyle=legCol; ctx.beginPath(); ctx.arc(fx,fy,2.8,0,7); ctx.fill();
+        }
       }
       ctx.shadowBlur=0;
     }
-    // 8眼（两行）
-    if(b.flash<=0){ ctx.fillStyle='#ff2020'; ctx.shadowColor='#ff0000'; ctx.shadowBlur=5;
-    for(let r=0;r<2;r++){ for(let c=0;c<4;c++){ ctx.beginPath(); ctx.arc((c-1.5)*5,-22+r*5,1.8,0,7); ctx.fill(); } } ctx.shadowBlur=0; }
+    // —— 身体覆盖在腿根之上 ——
+    ctx.shadowColor=glowCol; ctx.shadowBlur=e?40:26; ctx.fillStyle=brownGr;
+    ctx.beginPath(); ctx.ellipse(0,10,hw*0.30,hh*0.30,0,0,Math.PI*2); ctx.fill();   // 腹部（更大）
+    ctx.beginPath(); ctx.ellipse(0,-16,hw*0.24,hh*0.22,0,0,Math.PI*2); ctx.fill(); // 头胸（更大）
+    // 6眼（两行各3，红色）
+    if(b.flash<=0){ ctx.fillStyle='#ff2020'; ctx.shadowColor='#ff0000'; ctx.shadowBlur=8;
+    for(let r=0;r<2;r++){ for(let c=0;c<3;c++){ ctx.beginPath(); ctx.arc((c-1)*6,-22+r*5,2.5,0,7); ctx.fill(); } } ctx.shadowBlur=0; }
     // 腹部斑纹
-    if(b.flash<=0){ ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0,6,hw*0.1,hh*0.06,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(0,16,hw*0.08,hh*0.05,0,0,Math.PI*2); ctx.fill(); }
+    if(b.flash<=0){ ctx.fillStyle='rgba(30,15,5,.5)'; ctx.beginPath(); ctx.ellipse(0,6,hw*0.12,hh*0.08,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(0,16,hw*0.10,hh*0.06,0,0,Math.PI*2); ctx.fill(); }
     bossPhaseBlush(b); ctx.shadowBlur=0;
     bossCore(b, -16);
     ctx.restore();
@@ -2299,11 +2310,56 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     bossCore(b,0);
     ctx.restore();
   }
+  // == 关13：双子 — 被改造成武器的双星系统（热核+冷核），机械控制环 + 能量束 ==
   function bossDrawTwins(b){
     const cs=CONFIG.boss.archs[b.arch].color, e=b.phase>=2;
-    ctx.save(); ctx.shadowColor=cs; ctx.shadowBlur=e?40:26;
+    ctx.save();
     const sep=60+Math.sin(tick*0.02)*40, hh=b.h/2;
-    for(const side of [-1,1]){ const cx=b.x+side*sep; ctx.save(); ctx.translate(cx,b.y); const g=bossGradient({h:b.h, phase:b.phase},cs); ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,50,hh,0,0,7); ctx.fill(); if(side===-1){ ctx.strokeStyle='rgba(68,255,136,.5)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(50,0); ctx.lineTo(b.x+sep-50,b.y); ctx.stroke(); } ctx.fillStyle='#ccffcc'; ctx.shadowColor='#ccffcc'; ctx.shadowBlur=12; ctx.beginPath(); ctx.arc(0,0,8,0,7); ctx.fill(); ctx.shadowBlur=0; ctx.restore(); }
+    // 热核（橙红/右）& 冷核（青蓝/左）—— 被科学家改造的双子星武器
+    const hot={fill:'#ff5522', glow:'#ff3300', core:'#ffeec0', outer:'#884400'};
+    const cold={fill:'#22bbff', glow:'#0099ee', core:'#ccf0ff', outer:'#004488'};
+    const t=tick;
+    // ——————— 连接能量束（世界坐标，不受 translate 影响）———————
+    ctx.shadowColor=cs; ctx.shadowBlur=e?30:16;
+    ctx.strokeStyle='rgba(68,255,200,'+(.3+e*.4)+')';
+    ctx.lineWidth=3+e*2; ctx.beginPath(); ctx.moveTo(b.x-sep+42,b.y); ctx.lineTo(b.x+sep-42,b.y); ctx.stroke();
+    // 能量束上流动粒子
+    if(b.flash<=0){ ctx.fillStyle='#ccffdd';
+      for(let i=0;i<5;i++){ const ft=(t*0.04+i*0.22)%1, fx=b.x-sep+42+(2*sep-84)*ft;
+        ctx.beginPath(); ctx.arc(fx,b.y+Math.sin(ft*14+i*2)*6,1.6+Math.sin(ft*9+i)*1,0,7); ctx.fill(); } }
+    ctx.shadowBlur=0;
+    // ——————— 双核绘制 ———————
+    for(const side of [-1,1]){
+      const c=side===1?hot:cold;    // 右 = 热核，左 = 冷核
+      const cx=b.x+side*sep, r=38+Math.sin(t*0.03+side)*3;
+      ctx.save(); ctx.translate(cx,b.y);
+      const ringA=t*0.015*side, starA=t*0.025*side;
+      // 武器改造环（机械感金属环 + 4个发光节点）
+      ctx.shadowBlur=0; ctx.strokeStyle='rgba(180,180,220,.4)'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.ellipse(0,0,r+5,r+5,0,0,7); ctx.stroke();
+      ctx.setLineDash([3,7]); ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(0,0,r+5,r+5,0,0,7); ctx.stroke(); ctx.setLineDash([]);
+      for(let j=0;j<4;j++){ const a=j*1.5708+ringA; ctx.fillStyle=c.glow;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*(r+5),Math.sin(a)*(r+5),3+Math.sin(t*0.06+j)*1,0,7); ctx.fill(); }
+      // 星体核心（辐射渐变）
+      const rg=ctx.createRadialGradient(0,0,2,0,0,r);
+      rg.addColorStop(0,c.core); rg.addColorStop(.3,c.fill); rg.addColorStop(.85,c.fill); rg.addColorStop(1,c.outer);
+      ctx.shadowColor=c.glow; ctx.shadowBlur=e?45:26; ctx.fillStyle=rg;
+      ctx.beginPath(); ctx.ellipse(0,0,r,r*0.85,0,0,7); ctx.fill();
+      // 脉冲星芒射线
+      ctx.shadowBlur=0; ctx.strokeStyle=c.fill; ctx.globalAlpha=.15+e*.45;
+      for(let j=0;j<6;j++){ const a=j*1.0472+starA;
+        ctx.beginPath(); ctx.moveTo(r*0.25*Math.cos(a),r*0.25*Math.sin(a));
+        ctx.lineTo(Math.cos(a)*(r+16+Math.sin(t*0.06+j*1.2)*4),Math.sin(a)*(r+16+Math.sin(t*0.06+j*1.2)*4));
+        ctx.stroke(); }
+      ctx.globalAlpha=1;
+      // 核心亮点（核聚变闪光）
+      ctx.shadowColor=c.core; ctx.shadowBlur=18; ctx.fillStyle=c.core;
+      ctx.beginPath(); ctx.arc(0,0,5.5,0,7); ctx.fill();
+      if(e){ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,0,3.5,0,7); ctx.fill(); }
+      ctx.shadowBlur=0;
+      ctx.restore();
+    }
     bossPhaseBlush(b);
     ctx.restore();
   }
