@@ -205,7 +205,7 @@
     box-shadow:0 0 0 1px rgba(150,95,0,.55), 0 0 7px rgba(255,200,60,.55); }
   .coin-ic::after{ content:'¥'; position:absolute; inset:0; display:grid; place-items:center; font-size:10px; font-weight:800; color:#8a5200; line-height:1; }
   /* ===== Hangar / Shop (visual) ===== */
-  #hangarScreen{ padding:16px 28px; }
+  #hangarScreen, #encyclopediaScreen{ padding: calc(env(safe-area-inset-top, 0px) + 28px) 28px 16px; }  /* 顶距留出安全区，标题不被状态栏/顶边遮挡 */
   .hangar-head{ display:flex; align-items:center; justify-content:space-between; width:94%; max-width:440px; margin:2px 0 10px; }
   .hangar-head .coin-box{ font-size:15px; padding:8px 14px; }
   .hangar-scroll{ flex:1 1 auto; min-height:0; width:94%; max-width:440px; overflow:auto; display:flex; flex-direction:column; gap:14px; padding:2px 2px 4px;
@@ -1076,6 +1076,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   }
   // 战机缩略图：缩放居中绘制，避免小画布被拉伸成马赛克
   function drawSkinThumb(cv, skinFn){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawSkinThumb(cv,skinFn)); return; }
     const { g, w, h }=prepThumb(cv);
     const T=CONFIG.ui.thumb;
     const savedCtx=ctx, hadP=player, ti=tick, iv=invuln;
@@ -1090,6 +1091,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   }
   // 僚机预览：画出「上方选中的战斗机」+ 两侧僚机效果（与战斗 drawWingmen 一致）
   function drawPlaneWingThumb(cv, skinFn, wt){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawPlaneWingThumb(cv,skinFn,wt)); return; }
     const { g, w, h }=prepThumb(cv);
     const T=CONFIG.ui.thumb;
     const savedCtx=ctx, hadP=player, ti=tick, iv=invuln;
@@ -2048,7 +2050,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     if(b.flash<=0){
       for(let i=0;i<8;i++){
         const s=i<4?-1:1, idx=i<4?i:7-i, ph=sw+idx*0.6;
-        const bx=s*16, by=-8+idx*3;                           // 根（头胸边缘）
+        const bx=s*(7+idx*3), by=-12+idx*4;                // 根沿头胸圆周发散（内→外：x=±7→±16, y=-12→0）
         const wv=Math.sin(ph)*5, wv2=Math.sin(ph+1.2)*4;     // 小幅度柔摆
         // coxa→knee：短弧向外（蜘蛛膝向上拱）
         const kx=bx+s*(20+wv), ky=by+12+wv2;
@@ -2088,9 +2090,9 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     if(b.flash<=0){ ctx.fillStyle='rgba(255,255,255,.35)'; ctx.fillRect(-20,-hh*0.6,40,18); ctx.fillRect(-14,-hh*0.5,28,12); }
     // 舰艏撞角
     if(b.flash<=0){ ctx.fillStyle='rgba(255,255,255,.4)'; ctx.beginPath(); ctx.moveTo(0,-hh*0.78); ctx.lineTo(-5,-hh*0.95); ctx.lineTo(5,-hh*0.95); ctx.closePath(); ctx.fill(); }
-    // 5门炮管（两舷伸出）
+    // 5门侧舷炮（两舷各5，统一炮廊高度，沿船腹直线排列）
     if(b.flash<=0){ ctx.fillStyle=cs; ctx.shadowColor=cs; ctx.shadowBlur=6;
-    for(let i=0;i<5;i++){ const x=(i-2)*12, y=hh*0.1+i*3; ctx.fillRect(x-2,y,4,16); } ctx.shadowBlur=0; }
+    for(let i=0;i<5;i++){ const bx=35+i*4, by=hh*0.22; ctx.fillRect(-bx-12,by-3,12,5); ctx.fillRect(bx,by-3,12,5); } ctx.shadowBlur=0; }
     // 引擎光焰
     if(b.flash<=0){ ctx.fillStyle='rgba(100,180,255,.5)'; ctx.beginPath(); ctx.moveTo(-15,hh*0.45); ctx.lineTo(15,hh*0.45); ctx.lineTo(10,hh*0.65); ctx.quadraticCurveTo(0,hh*0.7,-10,hh*0.65); ctx.closePath(); ctx.fill(); }
     bossPhaseBlush(b); ctx.shadowBlur=0;
@@ -3061,6 +3063,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   }
 
   function drawEnemyThumb(cv, enemyKey){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawEnemyThumb(cv,enemyKey)); return; }
     const em = CONFIG.enemies[enemyKey];
     const r = cv.getBoundingClientRect ? cv.getBoundingClientRect() : {width:200, height:70};
     const dpr = Math.min(window.devicePixelRatio||1, 2);
@@ -3106,6 +3109,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx = savedCtx; tick = savedTick;
   }
   function drawFighterThumb(cv, skin){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawFighterThumb(cv,skin)); return; }
     const { g, w, h } = prepThumb(cv);
     const s = Math.min(w*0.7/(skin.w||44), h*0.7/(skin.h||52));
     const savedCtx=ctx, hadP=player, ti=tick;
@@ -3116,6 +3120,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx=savedCtx; player=hadP; tick=ti;
   }
   function drawWingThumb(cv, wingKey){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawWingThumb(cv,wingKey)); return; }
     const wt=CONFIG.player.wingTypes[wingKey];
     const { g, w, h } = prepThumb(cv);
     const savedCtx=ctx, ti=tick;
@@ -3128,6 +3133,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   }
   // 通用图标缩略图：彩色发光圆 + 中心字形（掉落图鉴 / 商店道具共用，保证两处视觉一致）
   function drawIconThumb(cv, color, label){
+    if(!cv.isConnected){ requestAnimationFrame(()=>drawIconThumb(cv,color,label)); return; }
     const { g, w, h } = prepThumb(cv);
     const cx=w/2, cy=h/2, R=Math.min(w,h)*0.30;
     g.save();
