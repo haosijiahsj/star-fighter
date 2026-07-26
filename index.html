@@ -140,6 +140,19 @@
     box-shadow:0 8px 24px rgba(0,0,0,.4); }
   #warpSkip:hover{ border-color:var(--neon); color:#fff; }
 
+  /* 征程地图遮罩 */
+  #mapOverlay{ position:absolute; inset:0; z-index:5; pointer-events:none; }
+  #mapOverlay>*{ pointer-events:auto; }
+  #mapTitle{ font-size:22px; font-weight:800; color:#ffd76a; text-align:center; text-shadow:0 2px 12px rgba(255,215,106,.5); margin:16px 0 4px; position:relative; z-index:1; }
+  #mapSubtitle{ text-align:center; color:#8fb0ff; font-size:12px; margin-bottom:12px; position:relative; z-index:1; }
+  #mapBackBtn{ position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:1; }
+  #mapNodes{ position:absolute; inset:0; pointer-events:none; z-index:0; }   /* 空白区透传给 canvas 用于拖拽滚动 */
+  .map-node{ position:absolute; width:34px; height:34px; border-radius:50%; border:none; background:transparent; pointer-events:auto; cursor:pointer; transform:translate(-50%,-50%); z-index:1; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#fff; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+  .map-node.locked{ pointer-events:none; opacity:.35; }
+  #mapScrollBar{ position:absolute; right:7px; top:74px; bottom:74px; width:4px; border-radius:2px; background:rgba(120,160,255,.12); z-index:1; pointer-events:none; }
+  #mapScrollThumb{ position:absolute; left:0; right:0; top:0; border-radius:2px; background:rgba(150,200,255,.55); }
+  #mapScrollHint{ position:absolute; bottom:72px; left:50%; transform:translateX(-50%); font-size:11px; color:#7f96d6; z-index:1; pointer-events:none; white-space:nowrap; }
+
   .hint{ font-size:12px; color:#7f96d6; margin-top:16px; display:flex; flex-direction:column; gap:4px; align-items:center; line-height:1.7; }
   .kbd{ display:inline-block; background:rgba(120,160,255,.15); border:1px solid var(--stroke); border-radius:6px; padding:1px 7px; font-size:11px; }
 
@@ -328,6 +341,16 @@
       </div>
     </div>
 
+    <!-- 征程地图遮罩 -->
+    <div id="mapOverlay" class="hidden">
+      <div id="mapTitle">🗺 征程地图</div>
+      <div id="mapSubtitle"></div>
+      <div id="mapNodes"></div>
+      <div id="mapScrollBar"><div id="mapScrollThumb"></div></div>
+      <div id="mapScrollHint">拖动 / 滚轮 探索更长征程</div>
+      <button id="mapBackBtn" class="btn hangar" style="max-width:560px;width:96%">返回主菜单</button>
+    </div>
+
     <!-- Pause Screen -->
     <div id="pauseScreen" class="screen hidden">
       <div class="logo" style="font-size:34px">已暂停</div>
@@ -345,6 +368,7 @@
         <ol class="rank" id="rankList"></ol>
       </div>
       <button class="btn primary big" id="againBtn" style="max-width:300px">🔄 再来一局</button>
+      <button class="btn hangar big" id="overMapBtn" style="max-width:300px">🗺 征程地图</button>
       <button class="btn ghost big" id="menuBtn" style="max-width:300px">返回主菜单</button>
     </div>
 
@@ -361,7 +385,7 @@
         <button class="encyclopedia-tab" data-tab="items">道具</button>
       </div>
       <div class="hangar-scroll" id="hangarList"></div>
-      <button class="btn hangar" id="hangarBackBtn" style="max-width:440px;width:94%">返回主菜单</button>
+      <button class="btn hangar" id="hangarBackBtn" style="max-width:560px;width:96%">返回主菜单</button>
     </div>
 
     <!-- Encyclopedia Screen -->
@@ -377,7 +401,7 @@
         <button class="encyclopedia-tab" data-tab="drops">掉落奖励</button>
       </div>
       <div class="hangar-scroll" id="encyclopediaList"></div>
-      <button class="btn hangar" id="encyclopediaBackBtn" style="max-width:440px;width:94%">返回主菜单</button>
+      <button class="btn hangar" id="encyclopediaBackBtn" style="max-width:560px;width:96%">返回主菜单</button>
     </div>
 
     <div id="notify" class="notify"></div>
@@ -503,7 +527,7 @@
 
   // ============ Save (meta progression) ============
   const SAVE_KEY='starfighter_save_v1';
-  function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&typeof s==='object') return Object.assign({coins:0,atkLv:0,streamBase:1,wingType:null,ownedSkins:['vanguard'],startLives:3,maxLives:6,items:{bomb:0,shield:0,invinc:0,lifeBase:0}}, s); }catch(e){} return {coins:0,atkLv:0,streamBase:1,wingType:null,ownedSkins:['vanguard'],startLives:3,maxLives:6,items:{bomb:0,shield:0,invinc:0,lifeBase:0}}; }
+  function loadSave(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&typeof s==='object') return Object.assign({coins:0,atkLv:0,streamBase:1,wingType:null,ownedSkins:['vanguard'],startLives:3,maxLives:6,campaignUnlocked:1,bossrushUnlocked:1,items:{bomb:0,shield:0,invinc:0,lifeBase:0}}, s); }catch(e){} return {coins:0,atkLv:0,streamBase:1,wingType:null,ownedSkins:['vanguard'],startLives:3,maxLives:6,campaignUnlocked:1,bossrushUnlocked:1,items:{bomb:0,shield:0,invinc:0,lifeBase:0}}; }
   function saveSave(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
   let save=loadSave();
   let maxLives=save.maxLives;   // 命数硬上限（商店可放宽）
@@ -512,7 +536,7 @@
   let coinsRun=0;   // 本局已拾取金币（gameOver 结算入 save.coins）
 
   // ============ Game State ============
-  const State={ MENU:'menu', PLAY:'play', PAUSE:'pause', OVER:'over', HANGAR:'hangar', ENCYCLOPEDIA:'encyclopedia', WARP:'warp', DYING:'dying' };
+  const State={ MENU:'menu', PLAY:'play', PAUSE:'pause', OVER:'over', HANGAR:'hangar', ENCYCLOPEDIA:'encyclopedia', WARP:'warp', DYING:'dying', MAP:'map' };
   let state=State.MENU;
   let deathT=0;   // 死亡动画倒计时（帧）
   let player, bullets, enemies, eBullets, particles, stars, planets, meteors, motes;
@@ -933,15 +957,13 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   function resetGame(startLv){
     const P=CONFIG.player, sk=getSkin(selSkin);
     player={ x:W/2, y:H-P.startYOffset, w:sk.w||P.w, h:sk.h||P.h, speed:6, cool:0, tx:W/2, ty:H-P.startYOffset, skin:sk.id };
-    bullets=[]; enemies=[]; eBullets=[]; particles=[]; powerups=[]; coins=[]; spreadT=0; wingBoostT=0; lastStream=1; toastT=0; coinsRun=0;
+    bullets=[]; enemies=[]; eBullets=[]; particles=[]; powerups=[]; coins=[]; spreadT=0; wingBoostT=0; lastStream=1; toastT=0; coinsRun=0; shipTouchId=null;
     regenWingmen();   // 按当前装备型号生成 wingCount 架僚机（未拥有则不生成）
     maxLives=save.maxLives;          // 命数硬上限（商店可放宽）
-    invItems={ bomb:save.items.bomb||0, shield:save.items.shield||0, invinc:save.items.invinc||0, lifeBase:save.items.lifeBase||0, shieldHits:0 }; // 本局库存继承自商店购买
-    score=0; maxHP=P.maxHP; hp=P.maxHP; lives=save.startLives; tick=0; spawnTimer=0; diffMul=1; invuln=0; invincT=0; rage=0; ultActive=false; ultT=0; laserPhase=0;
+    invItems={ bomb:save.items.bomb||0, shield:save.items.shield||0, invinc:save.items.invinc||0, shieldHits:0 }; // 本局库存继承自商店购买
+    score=0; maxHP=P.maxHP; hp=P.maxHP; lives=Math.min(maxLives, save.startLives+(save.items.lifeBase||0)); tick=0; spawnTimer=0; diffMul=1; invuln=0; invincT=0; rage=0; ultActive=false; ultT=0; laserPhase=0;
     furyT=0; furyStack=0; phaseDodgeCD=0; armorT=0; armorCD=0;
     slowFactor=1; slowEnemyFactor=1; overloadCount=0;
-    // 自动消耗「生命条数+1」道具：库存中每份开局自动加 1 命（不超过上限），用完即清零
-    if(invItems.lifeBase>0){ const add=Math.min(invItems.lifeBase, maxLives-lives); lives+=add; save.items.lifeBase-=add; invItems.lifeBase=0; if(add) saveSave(); }
     boss=null; won=false; meteorTimer=0;
     startLevel(startLv||1);
     initStars();
@@ -949,9 +971,19 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     renderItemPanel();   // 按本局库存重建左侧道具面板
   }
 
+  // ============ 征程地图 ============
+  let mapNodes=[];             // 预计算节点坐标 [{x,y,level}]
+  let mapUnlockBurst=0;        // 新节点解锁爆裂粒子计时器
+  let mapUnlockedLevel=0;      // 本次解锁的关卡号
+  let mapDash=0;               // 路径流动虚线偏移（延伸效果）
+  let mapWorldH=0;             // 地图世界总高度（可高于屏幕，支持滑动）
+  let mapCamY=0;               // 摄像机竖直偏移（世界顶部对应的屏幕 y）
+  let mapDragging=false;       // 是否正在拖拽滚动
+  let mapDragY=0;              // 拖拽起始屏幕 y
+  let mapTouchId=null;         // 控制地图滚动的触控手指 id
   // ============ Input ============
   const keys={};
-  let pointerDown=false;
+  let pointerDown=false, shipTouchId=null;   // shipTouchId 跟踪控制战机的触控手指
   window.addEventListener('keydown',e=>{
     if(state===State.WARP){ if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); skipWarp(); } return; }
     const tag=(e.target&&e.target.tagName)||'';
@@ -980,33 +1012,77 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     player.tx = Math.max(A.marginX, Math.min(W-A.marginX, clientX - r.left));
     player.ty = Math.max(A.marginTop, Math.min(H-A.marginBottom, clientY - r.top));
   }
-  canvas.addEventListener('mousedown',e=>{ pointerDown=true; pointerMove(e.clientX,e.clientY); });
-  window.addEventListener('mousemove',e=>{ if(pointerDown&&state===State.PLAY) pointerMove(e.clientX,e.clientY); });
-  window.addEventListener('mouseup',()=> pointerDown=false);
+  function startLevelFromMap(lv){
+    resetGame(lv);
+    shipTouchId=null; mapDragging=false; mapTouchId=null;
+    state=State.PLAY;
+    show(null);
+    el('mapOverlay').classList.add('hidden');
+    hud.classList.remove('hidden');
+  }
+  canvas.addEventListener('mousedown',e=>{
+    if(state===State.MAP){ mapDragging=true; mapDragY=e.clientY; }
+    else { pointerDown=true; pointerMove(e.clientX,e.clientY); }
+  });
+  window.addEventListener('mousemove',e=>{
+    if(mapDragging&&state===State.MAP){ mapCamY -= (e.clientY-mapDragY); mapDragY=e.clientY; }
+    else if(pointerDown&&state===State.PLAY) pointerMove(e.clientX,e.clientY);
+  });
+  window.addEventListener('mouseup',()=>{ pointerDown=false; mapDragging=false; });
+  canvas.addEventListener('wheel',e=>{ if(state===State.MAP){ mapCamY+=e.deltaY; mapCamY=Math.max(0,mapCamY); e.preventDefault(); } },{passive:false});
   function touchInRect(x,y,r){ return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom; }
-  canvas.addEventListener('touchstart',e=>{ 
-    const t=e.changedTouches?e.changedTouches[0]:e.touches[0];
-    // 触摸点在交互按钮上（道具面板 / 大招按钮）→ 不移动飞机，留给按钮自己处理
+  canvas.addEventListener('touchstart',e=>{
+    if(state===State.MAP){                                   // 空区域的触摸用于滚动地图
+      const t=e.changedTouches[0];
+      if(t){ mapTouchId=t.identifier; mapDragging=true; mapDragY=t.clientY; }
+      e.preventDefault(); return;
+    }
     const p=el('itemPanel'), u=el('ultBtn');
-    if((p&&touchInRect(t.clientX,t.clientY,p.getBoundingClientRect()))||(u&&touchInRect(t.clientX,t.clientY,u.getBoundingClientRect()))) return;
-    pointerDown=true; pointerMove(t.clientX,t.clientY); e.preventDefault(); 
+    for(let i=0;i<e.changedTouches.length;i++){
+      const t=e.changedTouches[i];
+      if((p&&touchInRect(t.clientX,t.clientY,p.getBoundingClientRect()))||(u&&touchInRect(t.clientX,t.clientY,u.getBoundingClientRect()))) continue;  // 按钮上的触摸留给 DOM 处理
+      if(shipTouchId===null){ shipTouchId=t.identifier; pointerDown=true; pointerMove(t.clientX,t.clientY); }
+    }
+    e.preventDefault(); 
   },{passive:false});
-  canvas.addEventListener('touchmove',e=>{ if(state===State.PLAY){ const t=e.touches[0]; pointerMove(t.clientX,t.clientY);} e.preventDefault(); },{passive:false});
-  canvas.addEventListener('touchend',e=>{ pointerDown=e.touches.length>0; e.preventDefault(); },{passive:false});
+  canvas.addEventListener('touchmove',e=>{
+    if(state===State.MAP){
+      for(let i=0;i<e.touches.length;i++){
+        if(e.touches[i].identifier===mapTouchId){ mapCamY -= (e.touches[i].clientY-mapDragY); mapDragY=e.touches[i].clientY; break; }
+      }
+      e.preventDefault(); return;
+    }
+    if(state===State.PLAY){
+      for(let i=0;i<e.touches.length;i++){ if(e.touches[i].identifier===shipTouchId){ pointerMove(e.touches[i].clientX,e.touches[i].clientY); break; } }
+      e.preventDefault();
+    }
+  },{passive:false});
+  canvas.addEventListener('touchend',e=>{
+    if(state===State.MAP){
+      for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===mapTouchId){ mapTouchId=null; mapDragging=false; } }
+      e.preventDefault(); return;
+    }
+    for(let i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===shipTouchId){ shipTouchId=null; break; } }
+    // 重新选择控制手指（如有其它手指仍在 canvas 上）
+    if(shipTouchId===null&&e.touches.length>0){
+      const p=el('itemPanel'), u=el('ultBtn');
+      for(let i=0;i<e.touches.length;i++){ const t=e.touches[i]; if(!(p&&touchInRect(t.clientX,t.clientY,p.getBoundingClientRect()))&&!(u&&touchInRect(t.clientX,t.clientY,u.getBoundingClientRect()))){ shipTouchId=t.identifier; break; } }
+    }
+    pointerDown=shipTouchId!==null;
+    e.preventDefault();
+  },{passive:false});
 
   // ============ Screen flow ============
-  function show(scr){ [startScreen,overScreen,pauseScreen,hangarScreen,encyclopediaScreen].forEach(s=>s.classList.add('hidden')); if(scr){ if(scr===startScreen) closeNickModal(); scr.classList.remove('hidden'); } }
+  function show(scr){ [startScreen,overScreen,pauseScreen,hangarScreen,encyclopediaScreen].forEach(s=>s.classList.add('hidden')); el('mapOverlay').classList.add('hidden'); if(scr){ if(scr===startScreen) closeNickModal(); scr.classList.remove('hidden'); } }
   function startGame(){
     playerName = (nickInput.value.trim()||randNick()).slice(0,12);
     gameMode='campaign';
-    resetGame();
-    state=State.PLAY; show(null); hud.classList.remove('hidden');
+    showMap(0);
   }
   function startBossRush(){
     playerName = (nickInput.value.trim()||randNick()).slice(0,12);
     gameMode='bossrush';
-    resetGame();
-    state=State.PLAY; show(null); hud.classList.remove('hidden');
+    showMap(0);
   }
   // 调试：直接跳至指定关卡
   el('debugMaxLevel').textContent=CONFIG.levels.max;
@@ -1037,11 +1113,17 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
 
   el('startBtn').onclick=startGame;
   el('bossRushBtn').onclick=startBossRush;
+  function openMapFromMenu(){
+    if(gameMode!=='bossrush') gameMode='campaign';   // 从菜单进默认战役
+    showMap(0);
+  }
+  el('overMapBtn').onclick=openMapFromMenu;
+  el('mapBackBtn').onclick=()=>{ state=State.MENU; show(startScreen); el('mapOverlay').classList.add('hidden'); };
   // 调试：跳关按钮 + 回车
   const debugLv=el('debugLevel'), debugGo=el('debugGoBtn');
   if(debugLv&&debugGo){ debugGo.onclick=debugGoToLevel; debugLv.onkeydown=e=>{ if(e.key==='Enter') debugGoToLevel(); }; }
 
-  el('againBtn').onclick=startGame;
+  el('againBtn').onclick=()=>{ if(gameMode==='bossrush') startBossRush(); else startGame(); };
   el('menuBtn').onclick=()=>{ state=State.MENU; show(startScreen); };
   el('quitBtn').onclick=()=>{ state=State.MENU; hud.classList.add('hidden'); show(startScreen); };
   el('resumeBtn').onclick=togglePause;
@@ -1785,6 +1867,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     explode(player.x,player.y,'#ff4d6d',16,4);
     if(hp<=0){
       lives--;
+      save.items.lifeBase=Math.max(0, lives-save.startLives); saveSave();   // 每次阵亡从购买池中消耗（跟随其它消耗品模式）
       if(lives<=0){ updateHUD(); startDeath(); return; }   // 死亡：先播爆裂特效，归零后再进结算
       hp=maxHP;
     }
@@ -3058,10 +3141,9 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   }
   function endWarp(){
     warpSkip.classList.add('hidden');
-    hud.classList.remove('hidden');
-    startLevel(level+1);                // 清残留 + 进入下一关（含过关横幅）
-    state=State.PLAY;
-    warpMode='normal';                  // 重置为普通跃迁模式
+    warpMode='normal';
+    if(level<CONFIG.levels.max) showMap(level);   // 已通关，征程地图 + 解锁下一关
+    else { won=true; gameOver(); }                // 全通（Lv17已在Boss死亡处处理，此乃安全兜底）
   }
   function skipWarp(){ if(state===State.WARP) endWarp(); }
   function drawBlackHole(x,y,sc,t){
@@ -3169,6 +3251,169 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     if(flash>0){ ctx.save(); ctx.globalAlpha=flash*0.9; ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); ctx.restore(); }
   }
 
+  // ============ 征程地图 ============
+  function computeMapNodes(){
+    mapNodes=[];
+    const L=CONFIG.levels.max;                       // 总关数（改 CONFIG.levels.max 即自动增减）
+    const cx=W/2;
+    const runW=Math.min(W-110, 330);                 // 单段横向跨度
+    const perRun=4;                                 // 每段节点数（折返一次）
+    const rowH=104;                                 // 段间竖直间距
+    const topPad=90, botPad=90;
+    const runs=Math.ceil(L/perRun);
+    mapWorldH=runs*rowH + topPad + botPad;          // 世界高度（可高于屏幕）
+    let level=1;
+    for(let r=0;r<runs;r++){
+      const y=mapWorldH - botPad - r*rowH;          // 自底向上逐段升高（第1关在底部）
+      const ltr=(r%2===0);                          // 左右交替 -> 折返折线
+      const x0=cx-(ltr?runW/2:-runW/2);
+      const x1=cx+(ltr?runW/2:-runW/2);
+      const cnt=Math.min(perRun, L-(r*perRun));
+      for(let j=0;j<cnt;j++){
+        const f=cnt===1?0.5:j/(cnt-1);
+        const wob=Math.sin(f*Math.PI)*(ltr?1:-1)*12; // 轻微正弦起伏，路径更像蜿蜒星轨
+        mapNodes.push({ x:x0+(x1-x0)*f + wob, y:y, level:level });
+        level++;
+      }
+    }
+  }
+  function mapMaxUnlocked(){ return gameMode==='bossrush' ? (save.bossrushUnlocked||1) : (save.campaignUnlocked||1); }
+  function showMap(completedLevel){
+    show(null);   // 隐藏所有屏幕（主菜单/结算等）
+    player={x:0,y:0,skin:selSkin||'vanguard',w:44,h:52,invuln:0,invincT:0};   // 地图用最小player，避免残值影响渲染
+    if(completedLevel>0){
+      const key=gameMode==='bossrush'?'bossrushUnlocked':'campaignUnlocked';
+      save[key]=Math.max(save[key]||1, completedLevel+1);
+      saveSave();
+      mapUnlockBurst=60; mapUnlockedLevel=completedLevel+1;
+    }
+    computeMapNodes();
+    // 创建 DOM 按钮（靠 DOM 点击，不走 canvas 坐标计算）
+    const nd=el('mapNodes'); nd.innerHTML='';
+    const maxU=mapMaxUnlocked();
+    for(const n of mapNodes){
+      const b=document.createElement('button');
+      b.className='map-node'+(n.level>maxU?' locked':'');
+      b.style.left=n.x+'px';
+      b.textContent=n.level<=maxU?n.level:'🔒';
+      b.title=n.level<=maxU?'进入第 '+n.level+' 关':'未解锁';
+      if(n.level<=maxU){
+        b.onclick=()=>{ startLevelFromMap(n.level); };
+        b.addEventListener('touchend',e=>{ e.preventDefault(); startLevelFromMap(n.level); });
+      }
+      n._btn=b; nd.appendChild(b);
+    }
+    // 摄像机自动对准当前关卡（居中显示）
+    const cur=mapNodes.find(n=>n.level===maxU);
+    mapCamY = cur ? Math.max(0, Math.min(cur.y - H*0.5, Math.max(0, mapWorldH - H)))
+                  : Math.max(0, mapWorldH - H);
+    layoutMapButtons();
+    state=State.MAP; hud.classList.add('hidden');
+    el('mapOverlay').classList.remove('hidden');
+    const modeLabel=gameMode==='bossrush'?'泰坦猎杀':'深空远征';
+    el('mapSubtitle').textContent=modeLabel+' · 已解锁至第 '+mapMaxUnlocked()+' 关';
+  }
+  function updateMap(){ tick++; if(mapUnlockBurst>0) mapUnlockBurst--; mapDash+=0.6; }
+  function clampMapCam(){ const maxC=Math.max(0, mapWorldH-H); mapCamY=Math.max(0, Math.min(mapCamY, maxC)); }
+  function layoutMapButtons(){
+    for(const n of mapNodes){
+      const b=n._btn; if(!b) continue;
+      const sy=n.y - mapCamY;                       // 世界坐标 -> 屏幕坐标
+      if(sy < -30 || sy > H+30){ b.style.display='none'; }   // 视口外隐藏，避免误触/杂乱
+      else { b.style.display=''; b.style.top=sy+'px'; }
+    }
+  }
+  function updateMapScrollHint(){
+    const bar=el('mapScrollBar'), thumb=el('mapScrollThumb'), hint=el('mapScrollHint');
+    if(!bar) return;
+    const scrollable=mapWorldH>H+2;
+    bar.style.display=scrollable?'':'none';
+    if(hint) hint.style.display=scrollable?'':'none';
+    if(!scrollable) return;
+    const maxC=Math.max(1, mapWorldH-H);
+    const trackH=bar.clientHeight;
+    const thumbH=Math.max(24, trackH*H/mapWorldH);
+    const ratio=Math.max(0,Math.min(1, mapCamY/maxC));
+    thumb.style.height=thumbH+'px';
+    thumb.style.top=(ratio*(trackH-thumbH))+'px';
+  }
+  function drawMapNode(n){
+    const maxU=mapMaxUnlocked();
+    const unlocked=n.level<=maxU;
+    const isCurrent=n.level===maxU;
+    const isBurst=n.level===mapUnlockedLevel&&mapUnlockBurst>0;
+    // 光晕
+    if(unlocked){
+      const pulse=isCurrent?(2+Math.sin(tick*0.08)*2):0;   // 当前关呼吸脉冲
+      ctx.beginPath(); ctx.arc(n.x,n.y,(isCurrent?29:23)+pulse,0,7);
+      const g=ctx.createRadialGradient(n.x,n.y,10,n.x,n.y,29+pulse);
+      if(isCurrent){ g.addColorStop(0,'rgba(255,215,106,.5)'); g.addColorStop(1,'rgba(255,180,50,0)'); }
+      else { g.addColorStop(0,'rgba(100,200,255,.35)'); g.addColorStop(1,'rgba(80,160,220,0)'); }
+      ctx.fillStyle=g; ctx.fill();
+      if(isBurst){
+        ctx.beginPath(); ctx.arc(n.x,n.y,23+mapUnlockBurst*0.8,0,7);
+        ctx.strokeStyle='rgba(255,215,80,'+(mapUnlockBurst/60).toFixed(2)+')'; ctx.lineWidth=3; ctx.stroke();
+      }
+    }
+    // 节点圆
+    ctx.beginPath(); ctx.arc(n.x,n.y,17,0,7);
+    ctx.fillStyle=unlocked?'rgba(20,30,50,.9)':'rgba(30,30,40,.6)';
+    ctx.fill();
+    ctx.strokeStyle=unlocked?(isCurrent?'#ffd76a':'#6ec8ff'):'#444';
+    ctx.lineWidth=isCurrent?3:2; ctx.stroke();
+    // 数字 / 锁 已由 DOM 按钮绘制，canvas 不再画，避免加粗重影
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // 通关标记
+    if(unlocked&&!isCurrent){ ctx.fillStyle='#6ec8ff'; ctx.font='9px sans-serif'; ctx.fillText('✔', n.x, n.y-18); }
+    // 可挑战标签
+    if(isCurrent){ ctx.fillStyle='#ffd76a'; ctx.font='9px sans-serif'; ctx.fillText('可挑战', n.x, n.y+24); }
+  }
+  function drawMap(){
+    const maxU=mapMaxUnlocked();
+    ctx.save();
+    ctx.translate(0,-mapCamY);                       // 摄像机：世界坐标 -> 屏幕坐标
+    // 整条折线底光（暗）
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    for(let i=0;i<mapNodes.length;i++){
+      const n=mapNodes[i];
+      if(i===0) ctx.moveTo(n.x,n.y); else ctx.lineTo(n.x,n.y);
+    }
+    ctx.strokeStyle='rgba(90,115,160,.16)'; ctx.lineWidth=7; ctx.stroke();
+    // 已解锁段高亮（亮蓝）
+    ctx.beginPath();
+    let started=false;
+    for(let i=0;i<mapNodes.length;i++){
+      const n=mapNodes[i];
+      if(n.level>maxU) break;
+      if(!started){ ctx.moveTo(n.x,n.y); started=true; } else ctx.lineTo(n.x,n.y);
+    }
+    ctx.strokeStyle='rgba(120,200,255,.55)'; ctx.lineWidth=4; ctx.stroke();
+    // 流动虚线（延伸效果，仅已解锁段）
+    ctx.setLineDash([3,13]);
+    ctx.lineDashOffset=-mapDash;
+    ctx.beginPath();
+    started=false;
+    for(let i=0;i<mapNodes.length;i++){
+      const n=mapNodes[i];
+      if(n.level>maxU) break;
+      if(!started){ ctx.moveTo(n.x,n.y); started=true; } else ctx.lineTo(n.x,n.y);
+    }
+    ctx.strokeStyle='rgba(190,235,255,.85)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.setLineDash([]);
+    // 节点
+    for(const n of mapNodes) drawMapNode(n);
+    ctx.restore();
+  }
+  function hitMapNode(tx,ty){
+    for(const n of mapNodes){
+      if(Math.hypot(tx-n.x,ty-n.y)<28){
+        if(n.level<=mapMaxUnlocked()) return n;
+      }
+    }
+    return null;
+  }
+
   // ============ Loop ============
   let lastT=0, acc=0;                 // 固定步长累加器：模拟以 60Hz 推进，与屏幕刷新率解耦
   function loop(now){
@@ -3187,6 +3432,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       drawWarp();
     } else if(state===State.PAUSE||state===State.OVER){ draw(); }
     else if(state===State.DYING){ stepParticles(); draw(); if(--deathT<=0) gameOver(); }   // 死亡特效播放中，结束后进结算
+    else if(state===State.MAP){ updateSpace(); updateMap(); clampMapCam(); ctx.clearRect(0,0,W,H); drawSpace(); drawMap(); layoutMapButtons(); updateMapScrollHint(); }   // 征程地图
     else { // menu / boot: idle deep-space
       if(!stars) initStars();
       tick++;
