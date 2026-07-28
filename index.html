@@ -661,7 +661,7 @@ const CAT_COIN_MUL = { normal:1.0, elite:1.5, sentinel:2.0, hazard:1.2 };
     // ===== 关卡解锁 =====
     campaignUnlocked(){ return this.data.progress.campaign; },
     bossrushUnlocked(){ return this.data.progress.bossrush; },
-    setUnlocked(key, lv){ this.data.progress[key]=Math.max(this.data.progress[key]||1, lv); this.save(); },
+    setUnlocked(key, lv){ this.data.progress[key]=Math.min(CONFIG.levels.max, Math.max(this.data.progress[key]||1, lv)); this.save(); },
   };
   let save = Save.load();   // 只读别名暴露给现有读代码（save.coins 等）；写入一律走 Save API
   function planeUpg(id){ return Save.planeUpg(id); }   // 旧调用点兼容（atkMul/streamLevel 仍用）
@@ -689,6 +689,7 @@ let armorT=0, armorCD=0;                // 泰坦被动：减伤计时 / 冷却
 let slowFactor=1, slowEnemyFactor=1;    // 夜莺大招：时缓倍率（默认=不减速）
 let overloadCount=0;                    // 脉冲被动：过载射击计数器
 let starlightTimer=0;                   // 星辰被动：自动星光弹计时
+let freezeTimer=0;                      // 玄冰被动：寒霜弹计时
 
 // ============ 被动钩子（4 个系统触发点：射速 / ���杀 / 闪避 / 受伤） ============
 // 新增被动类型 = 在对应钩子加一个分支；如无此触发点则不碰
@@ -717,7 +718,7 @@ function hookPlayerHit(skin, dmg){
 }
 
 // ============ 被动名称映射 ============
-const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:'相位步法', armor:'合金装甲', lifeSteal:'生命汲取', overload:'过载射击', starlight:'星辉' };
+const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:'相位步法', armor:'合金装甲', lifeSteal:'生命汲取', overload:'过载射击', starlight:'星辉', frost:'寒霜弹' };
 
   // ============ 全局配置（所有调参数值集中管理，行为不变） ============
   const CONFIG = {
@@ -771,6 +772,10 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
             hpMul:1.05, spdMul:0.95, dmgMul:1.10,
             bullet:{ glow:'rgba(136,204,255,0.95)', fill:'#d0f0ff', shape:'star' },
             passive:{ type:'starlight' }, ultimate:{ type:'supernova', dur:40, novaDmg:0.20, bossDmg:0.05 } },
+          { id:'frost',     name:'玄冰号', w:44, h:54, trail:'#a0d8ff', draw:drawPlayerFrost,     price:3500,
+            hpMul:0.95, spdMul:1.00, dmgMul:1.05,
+            bullet:{ glow:'rgba(160,216,255,0.95)', fill:'#d8eeff', shape:'snow' },
+            passive:{ type:'frost' }, ultimate:{ type:'freeze', dur:180, freezeDmg:0.08 } },
         ],
       // 大招（怒气 / 轨道炮）：enabled 可整体关闭；max 怒气上限；gains 各来源积攒量；dur 持续帧；beam 光束参数
       ultimate:{
@@ -997,18 +1002,20 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       max:18, bannerT:130,
       table:{},   // 每关可覆盖：quota / enemyMix / bossArch / theme（预留）
       // enemyMix 支持数组或函数(n)=>[...]；逐关解锁更多敌机，制造难度梯度
-      default:{ quota:n=>14+n*4, enemyMix:n=>{
-        const base=['scout','fighter'];
-        if(n>=2) base.push('drone');
-        if(n>=3) base.push('weaver','larva','wraith');
-        if(n>=4) base.push('interceptor','crystal');
-        if(n>=5) base.push('heavy','cosmicjelly','puffer');
-        if(n>=6) base.push('guardian');
-        if(n>=7) base.push('bomber');
-        if(n>=8) base.push('turret','voidbeast','prismCore');
-        if(n>=9) base.push('meteor','ravager');
-        if(n>=10) base.push('hivequeen');
-        return base;
+      default:{ quota:n=>18+n*3, enemyMix:n=>{
+        // 自动算法：进度百分比决定分类 + 权重偏移决定个体
+        const progress=n/CONFIG.levels.max;
+        const cats=['normal'];
+        if(progress>0.2) cats.push('hazard');
+        if(progress>0.5) cats.push('elite');
+        if(progress>0.8) cats.push('sentinel');
+        const bias=0.6+progress*0.4;   // 越后期低权重怪也加入
+        const pool=[];
+        for(const e of Object.values(CONFIG.enemies)){
+          if(!cats.includes(catOf(e.key))) continue;
+          if(e.weight>=(0.05/bias)) pool.push(e.key);
+        }
+        return pool;
       }, bossArch:null, theme:null },
     },
     background: {
@@ -1132,7 +1139,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     runLives = null;   // 消费携带值；本局运行中 endWarp 会重新存入
     tick=0; spawnTimer=0; diffMul=1; invuln=0; invincT=0; rage=0; ultActive=false; ultT=0; laserPhase=0;
     furyT=0; furyStack=0; phaseDodgeCD=0; armorT=0; armorCD=0;
-    slowFactor=1; slowEnemyFactor=1; overloadCount=0; starlightTimer=0;
+    slowFactor=1; slowEnemyFactor=1; overloadCount=0; starlightTimer=0; freezeTimer=0;
     boss=null; won=false; victoryT=0; playerDead=false; meteorTimer=0;
     startLevel(startLv||1);
     initStars();
@@ -1664,6 +1671,16 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         if(boss) boss.hp=Math.max(0, boss.hp-Math.round(boss.maxhp*U.bossDmg));
         for(let i=0;i<40;i++) explode(player.x+((Math.random()-.5)*200), player.y+((Math.random()-.5)*180), '#ffffff', 48, 14);
         break;
+      case 'freeze': // 玄冰·绝对零度：全屏冻结3s + 8%HP伤害
+        eBullets.length=0;
+        for(let i=enemies.length-1;i>=0;i--){
+          const e=enemies[i]; e.hp-=Math.round(e.maxhp*U.freezeDmg);
+          if(e.hp<=0){ killEnemy(e); enemies.splice(i,1); }
+          else e.frozenT=U.dur;
+        }
+        if(boss){ boss.hp=Math.max(0, boss.hp-Math.round(boss.maxhp*U.freezeDmg)); boss.frozenT=U.dur; }
+        for(let i=0;i<30;i++) explode(player.x+((Math.random()-.5)*180), player.y+((Math.random()-.5)*160), '#a0d8ff', 36, 10);
+        break;
     }
     for(let i=0;i<26;i++) explode(player.x, player.y-10, '#ffb13b', 26, 7);
   }
@@ -1844,31 +1861,32 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   function bossShoot(){ const A=CONFIG.boss.archs[boss.arch], P=CONFIG.boss.patterns; for(let ph=0;ph<=boss.phase;ph++){ const list=A.patterns[ph]; if(!list) continue; for(const {fn,p} of list) P[fn](boss,p); } }
   function updateBoss(){
     const b=boss, BC=CONFIG.boss;
-    if(b.entering){ b.y+=2; if(b.y>=BC.enterY) b.entering=false; return; }
-    // 阶段切换（阈值可逐原型覆盖）
-    const frac=b.hp/b.maxhp;
-    if(b.phase===0 && frac<=b.phaseTh[0]) enterBossPhase(1);
-    else if(b.phase===1 && frac<=b.phaseTh[1]) enterBossPhase(2);
-    // 移动
-    b.x = W/2 + Math.sin(tick*0.012)*(W/2-100);
-    // Boss 战中随机掉落奖励（阶段越高越频繁）
-    b.dropCool--;
-    if(b.dropCool<=0){ spawnPowerup(b.x + (Math.random()*40-20), b.y+40); const DC=b.dropCfg; b.dropCool = Math.max(DC.min, DC.base - b.phase*DC.step); }
-    // 冲击波环 / 闪光衰减
-    for(let i=b.rings.length-1;i>=0;i--){ const r=b.rings[i]; r.r+=5; r.life-=0.03; if(r.life<=0) b.rings.splice(i,1); }
-    if(b.flash>0) b.flash--;
-    // 射击（阶段越高越快）
-    b.cool--;
-    if(b.cool<=0){ bossShoot(); b.cool=Math.max(26, 84-level*4) - b.phase*10; }
-    // 召唤小兵（阶段越高越频繁；由 b.summon 控制，不限于某原型）
-    if(b.summon){
-      b.minionCool--;
-      if(b.minionCool<=0 && enemies.length<4+b.phase){
-        const sc=CONFIG.enemies.scout, MC=b.minionCfg;
-        enemies.push({type:'scout', x:b.x+(Math.random()<.5?-70:70), y:b.y+40, w:sc.w, h:sc.h, hp:sc.hp||1, maxhp:sc.hp||1, vy:1.6, vx:0, score:sc.score||0, cool:MC.enemyCool});
-        b.minionCool=Math.max(MC.min, MC.base - level*MC.lvK - b.phase*MC.phaseK);
+    // 冻结倒计时（不移动不射击，但仍可被命中）
+    if(b.frozenT>0) b.frozenT--;
+    // 入场动画
+    if(b.entering){ b.y+=2; if(b.y>=BC.enterY) b.entering=false; }
+    // 非冻结 + 非入场阶段：正常运转
+    if(!b.entering && !(b.frozenT>0)){
+      const frac=b.hp/b.maxhp;
+      if(b.phase===0 && frac<=b.phaseTh[0]) enterBossPhase(1);
+      else if(b.phase===1 && frac<=b.phaseTh[1]) enterBossPhase(2);
+      b.x = W/2 + Math.sin(tick*0.012)*(W/2-100);
+      b.dropCool--;
+      if(b.dropCool<=0){ spawnPowerup(b.x+(Math.random()*40-20), b.y+40); const DC=b.dropCfg; b.dropCool=Math.max(DC.min, DC.base-b.phase*DC.step); }
+      b.cool--;
+      if(b.cool<=0){ bossShoot(); b.cool=Math.max(26, 84-level*4)-b.phase*10; }
+      if(b.summon){
+        b.minionCool--;
+        if(b.minionCool<=0 && enemies.length<4+b.phase){
+          const sc=CONFIG.enemies.scout, MC=b.minionCfg;
+          enemies.push({type:'scout', x:b.x+(Math.random()<.5?-70:70), y:b.y+40, w:sc.w, h:sc.h, hp:sc.hp||1, maxhp:sc.hp||1, vy:1.6, vx:0, score:sc.score||0, cool:MC.enemyCool});
+          b.minionCool=Math.max(MC.min, MC.base-level*MC.lvK-b.phase*MC.phaseK);
+        }
       }
     }
+    // 冲击波环 / 闪光衰减（始终运行）
+    for(let i=b.rings.length-1;i>=0;i--){ const r=b.rings[i]; r.r+=5; r.life-=0.03; if(r.life<=0) b.rings.splice(i,1); }
+    if(b.flash>0) b.flash--;
     // 戴森球收集节点更新
     if(b.collectors){
       const R=70+8*Math.sin(tick*0.01);
@@ -1960,6 +1978,18 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         starlightTimer=0;
         const sb=getSkin(player.skin).bullet, m=atkMul();
         for(let k=0;k<3;k++){ bullets.push({x:player.x+(k-1)*8, y:player.y-12, w:6, h:14, vx:(k-1)*0.6, vy:-7, dmg:Math.round(24*m*1.5), glow:sb.glow, fill:sb.fill, shape:'star', homing:false}); }
+      }
+    }
+    // 玄冰被动：每 ~3.3s 向最近敌机发射一发寒霜弹（直飞，命中冻结 2s）
+    if(getSkin(player.skin).passive?.type==='frost'){
+      freezeTimer++;
+      if(freezeTimer>=200 && enemies.length>0){
+        freezeTimer=0;
+        let nearest=enemies[0], bd=Infinity;
+        for(const e of enemies){ const d=Math.hypot(e.x-player.x, e.y-player.y); if(d<bd){ bd=d; nearest=e; } }
+        const ang=Math.atan2(nearest.y-player.y, nearest.x-player.x);
+        const sp=5, m=atkMul(), sb=getSkin(player.skin).bullet;
+        bullets.push({x:player.x, y:player.y-8, w:10, h:16, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp, dmg:Math.round(18*m), glow:'rgba(160,216,255,0.95)', fill:'#e0f0ff', shape:'snow', freeze:true, customColor:'#a0d8ff'});
       }
     }
 
@@ -2098,10 +2128,14 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     // enemies
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i];
-      const em=CONFIG.enemies[e.type].move;
-      if(em && e.dir==='top') em(e);          // 自定义移动仅上方敌机生效
-      else { e.y+=e.vy*slowEnemyFactor; e.x+=e.vx*slowEnemyFactor; if(e.dir==='top'&&(e.x<e.w/2||e.x>W-e.w/2)) e.vx*=-1; }
-      e.cool--; if(e.cool<=0){ enemyShoot(e); e.cool = Math.round(CONFIG.enemies[e.type].coolReset*(1-prog()*D.coolK)); }
+      // 冻结：不移动不射击，倒计时
+      if(e.frozenT>0){ e.frozenT--; e.cool=Math.max(e.cool,1); }
+      else {
+        const em=CONFIG.enemies[e.type].move;
+        if(em && e.dir==='top') em(e);
+        else { e.y+=e.vy*slowEnemyFactor; e.x+=e.vx*slowEnemyFactor; if(e.dir==='top'&&(e.x<e.w/2||e.x>W-e.w/2)) e.vx*=-1; }
+        e.cool--; if(e.cool<=0){ enemyShoot(e); e.cool = Math.round(CONFIG.enemies[e.type].coolReset*(1-prog()*D.coolK)); }
+      }
       // 孵化子体：读取 spawnChildren 配置
       const ecfg=CONFIG.enemies[e.type];
       if(ecfg.spawnChildren){ e.spawnCool=(e.spawnCool||ecfg.spawnChildren.interval)-1; if(e.spawnCool<=0&&enemies.length<ecfg.spawnChildren.max){ const cc=ecfg.spawnChildren, lc=CONFIG.enemies[cc.type]; enemies.push({type:cc.type,x:e.x+(Math.random()<.5?-50:50),y:e.y+10,baseX:0,w:lc.w,h:lc.h,hp:lc.hp||1,maxhp:lc.hp||1,vy:lc.vy,vx:0,score:lc.score||0,cool:lc.coolInit(1)}); e.spawnCool=cc.interval+(Math.random()*120|0); } }
@@ -2114,6 +2148,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
           // Guardian 外环格挡：子弹离核心超出 shieldRadius 则被环吸收
           if(ecfg.shieldRadius){ const gd=Math.hypot(b.x-e.x,b.y-e.y); if(gd>ecfg.shieldRadius){ bullets.splice(j,1); explode(b.x,b.y,'#ffe8a0',4,2); continue; } }
           e.hp-=b.dmg; addRage(CONFIG.player.ultimate.gains.hit);
+          if(b.freeze) e.frozenT=Math.max(e.frozenT||0, 120);  // 寒霜弹：冻结 2 秒
           if(b.penetrate){ explode(b.x,b.y,'#ff6633',b.explodeSize||16,b.explodeSpd||5); if(!b.hitOnce){ b.hitOnce=true; } }
           else bullets.splice(j,1);
           explode(b.x,b.y,'#9fe8ff',5,3);
@@ -2350,11 +2385,13 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       case 'snow':   // 雪花：6射线 + 发光精灵，取消 shadowBlur
         ctx.save(); ctx.translate(x,y);
         ctx.rotate(tick*0.04+(x*0.01)%6.28);
-        ctx.strokeStyle='rgba(220,240,255,0.6)'; ctx.lineWidth=1.2;
+        ctx.strokeStyle=b.customColor||'rgba(220,240,255,0.6)'; ctx.lineWidth=1.5;
         ctx.beginPath();
         for(let i=0;i<6;i++){ const a=i*Math.PI/3; ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*w/3,Math.sin(a)*w/3); }
         ctx.stroke();
+        ctx.fillStyle='rgba(200,230,255,0.4)'; ctx.beginPath(); ctx.arc(0,0,w/3.5,0,7); ctx.fill();
         ctx.restore();
+        break;
       case 'star':   // 星辰号：五角旋转星弹
         ctx.save(); ctx.translate(x,y); ctx.rotate(tick*0.06);
         ctx.fillStyle=b.fill||'#d0f0ff';
@@ -2419,6 +2456,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
           case 'slow':   drawUltSlow(); break;
           case 'emp':    drawUltEMP(); break;
           case 'supernova': drawUltSupernova(); break;
+          case 'freeze':   drawUltFreeze(); break;
         }
       }
       syncRage();
@@ -3222,7 +3260,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx.restore();
   }
   function getUltName(type){
-    const names={ beam:'轨道炮', barrage:'暴风雨', nova:'虚空新星', shield:'护盾冲击', slow:'时缓领域', emp:'电磁脉冲', supernova:'超新星' };
+    const names={ beam:'轨道炮', barrage:'暴风雨', nova:'虚空新星', shield:'护盾冲击', slow:'时缓领域', emp:'电磁脉冲', supernova:'超新星', freeze:'绝对零度' };
     return names[type]||'大招';
   }
   function drawUltBarrage(){  // 突击者·暴风雨：枪口闪烁
@@ -3281,6 +3319,16 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(player.x, player.y, 80+fl*90, 0, 7); ctx.stroke();
     ctx.globalAlpha=fl; ctx.fillStyle='rgba(200,230,255,'+(0.3+fl*0.3)+')';
     for(let i=0;i<8;i++){ const a=i/8*Math.PI*2+tick*0.02, r=30+fl*40; ctx.beginPath(); ctx.arc(player.x+Math.cos(a)*r,player.y+Math.sin(a)*r,2,0,7); ctx.fill(); }
+    ctx.restore();
+  }
+  function drawUltFreeze(){  // 玄冰·绝对零度：白闪 + 冰晶裂片
+    const fl=0.3+0.3*Math.sin(tick*0.15);
+    ctx.save();
+    ctx.globalAlpha=fl*0.12; ctx.fillStyle='#c8e8ff'; ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=fl*0.4; ctx.strokeStyle='#a0d8ff'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(player.x, player.y, 50+fl*80, 0, 7); ctx.stroke();
+    ctx.fillStyle='rgba(200,230,255,'+(0.2+fl*0.2)+')';
+    for(let i=0;i<12;i++){ const a=i/12*Math.PI*2+tick*0.01, r=25+fl*50; ctx.beginPath(); ctx.arc(player.x+Math.cos(a)*r,player.y+Math.sin(a)*r,2,0,7); ctx.fill(); }
     ctx.restore();
   }
   const ULT_RING_C = 2*Math.PI*26;   // 大招圆环周长（r=26），用于怒气进度
@@ -3554,6 +3602,53 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     ctx.beginPath(); ctx.ellipse(0,-18,6,3,0,0,7); ctx.fill(); ctx.stroke();
     ctx.restore();
   }
+  function drawPlayerFrost(){  // 玄冰号：冰晶战机 — 前掠翼+霜晶机身
+    const {x,y}=player; ctx.save(); ctx.translate(x,y);
+    if(invuln>0 && (tick>>2)&1) ctx.globalAlpha=0.4;
+    ctx.shadowBlur=0;
+    // 尾部喷射（冰蓝引擎焰）
+    const fp=7+Math.sin(tick*0.4)*4;
+    const trail=ctx.createLinearGradient(0,12,0,36+fp); trail.addColorStop(0,'#c8ecff'); trail.addColorStop(.5,'#78b8e8'); trail.addColorStop(1,'rgba(60,140,220,0)');
+    ctx.fillStyle=trail; ctx.beginPath(); ctx.moveTo(-6,12); ctx.lineTo(0,36+fp); ctx.lineTo(6,12); ctx.closePath(); ctx.fill();
+    // 机身：纺锤形冰晶
+    ctx.shadowColor='#90d0ff'; ctx.shadowBlur=5;
+    const body=ctx.createLinearGradient(0,-14,0,14); body.addColorStop(0,'#e0f4ff'); body.addColorStop(.4,'#a0d8f0'); body.addColorStop(1,'#5088b8');
+    ctx.fillStyle=body; ctx.beginPath();
+    ctx.moveTo(0,-18); ctx.lineTo(5,-10); ctx.lineTo(8,0); ctx.lineTo(7,8); ctx.lineTo(3,12); ctx.lineTo(-3,12); ctx.lineTo(-7,8); ctx.lineTo(-8,0); ctx.lineTo(-5,-10);
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0; ctx.strokeStyle='rgba(200,235,255,.45)'; ctx.lineWidth=1; ctx.stroke();
+    // 旋转雪花徽记（机身中部）
+    ctx.save(); ctx.rotate(tick*0.012);
+    ctx.strokeStyle='rgba(180,220,255,0.4)'; ctx.lineWidth=1.4;
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; ctx.beginPath(); ctx.moveTo(Math.cos(a)*5,Math.sin(a)*5); ctx.lineTo(Math.cos(a)*12,Math.sin(a)*12); ctx.stroke(); }
+    ctx.fillStyle='rgba(200,235,255,0.3)'; for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; ctx.beginPath(); ctx.arc(Math.cos(a)*12,Math.sin(a)*12,1.5,0,7); ctx.fill(); }
+    ctx.restore();
+    // 前掠冰晶翼（雪花元素融入战机翼形）
+    ctx.shadowColor='#90d0ff'; ctx.shadowBlur=4;
+    // 左上翼
+    ctx.fillStyle='rgba(160,215,245,0.6)'; ctx.strokeStyle='rgba(200,235,255,0.4)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(-4,-6); ctx.lineTo(-18,-14); ctx.lineTo(-14,-8); ctx.lineTo(-5,-4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 右上翼
+    ctx.beginPath(); ctx.moveTo(4,-6); ctx.lineTo(18,-14); ctx.lineTo(14,-8); ctx.lineTo(5,-4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 左后掠翼
+    ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-20,-2); ctx.lineTo(-18,6); ctx.lineTo(-6,4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 右后掠翼
+    ctx.beginPath(); ctx.moveTo(5,0); ctx.lineTo(20,-2); ctx.lineTo(18,6); ctx.lineTo(6,4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 翼缘冰晶刺
+    ctx.fillStyle='rgba(200,240,255,0.45)';
+    const wingTips=[[-16,-11],[-18,1],[16,-11],[18,1]];
+    for(const [wx,wy] of wingTips){ ctx.beginPath(); ctx.arc(wx,wy,2,0,7); ctx.fill(); }
+    // 翼侧冰刺（雪花锯齿）
+    ctx.shadowBlur=0; ctx.strokeStyle='rgba(200,240,255,0.35)'; ctx.lineWidth=0.6;
+    for(const s of [-1,1]){ for(const dy of [-3,0,3]){ ctx.beginPath(); ctx.moveTo(s*12,dy-1); ctx.lineTo(s*15,dy-3); ctx.stroke(); } }
+    // 座舱：菱形冰晶
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(200,240,255,0.7)'; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=0.6;
+    ctx.beginPath(); ctx.moveTo(0,-12); ctx.lineTo(3.5,-6); ctx.lineTo(0,-2); ctx.lineTo(-3.5,-6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 机鼻冰晶尖
+    ctx.fillStyle='rgba(220,245,255,0.65)'; ctx.beginPath(); ctx.moveTo(0,-18); ctx.lineTo(2,-14); ctx.lineTo(-2,-14); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
   function drawWingVulcan(c){
     // 双管加特林：粗短梯形机身+双炮口
     ctx.fillStyle=c;
@@ -3646,19 +3741,31 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   function drawRavager(e){ ctx.drawImage(glowCache.gold, -38,-30,76,60); ctx.fillStyle='#ffc83c'; ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(8,-12); ctx.lineTo(26,-16); ctx.lineTo(18,-2); ctx.lineTo(28,10); ctx.lineTo(16,18); ctx.lineTo(6,26); ctx.lineTo(-6,26); ctx.lineTo(-16,18); ctx.lineTo(-28,10); ctx.lineTo(-18,-2); ctx.lineTo(-26,-16); ctx.lineTo(-8,-12); ctx.closePath(); ctx.fill(); ctx.fillStyle='#fff0c0'; ctx.beginPath(); ctx.moveTo(10,-14); ctx.lineTo(20,-12); ctx.lineTo(14,0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(-10,-14); ctx.lineTo(-20,-12); ctx.lineTo(-14,0); ctx.closePath(); ctx.fill(); ctx.fillStyle='#8b0000'; ctx.beginPath(); ctx.arc(0,-6,3,0,7); ctx.fill(); }
   function drawHivequeen(e){ ctx.drawImage(glowCache.soft, -48,-40,96,80); ctx.fillStyle='#c86496'; ctx.beginPath(); ctx.ellipse(0,4,28,20,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(0,-12,18,14,0,0,Math.PI*2); ctx.fill(); const sw3=Math.sin(tick*0.04)*3; for(let i=0;i<4;i++){ const s=i<2?-1:1; ctx.strokeStyle='#c86496'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(s*22,-6+i*3); ctx.quadraticCurveTo(s*30+sw3,-4,s*34+sw3*2,8); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,.25)'; ctx.beginPath(); ctx.ellipse(0,4,14,8,0,0,Math.PI*2); ctx.fill(); for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc((i-1)*6,6,3,0,7); ctx.fill(); } ctx.fillStyle='#ff3060'; ctx.beginPath(); ctx.arc(0,-14,3,0,7); ctx.fill(); }
   function drawCosmicjelly(e){ ctx.globalAlpha=0.7; ctx.drawImage(glowCache.cyan, -34,-36,68,72); ctx.fillStyle='rgba(120,220,255,.35)'; ctx.beginPath(); ctx.ellipse(0,-8,26,16,0,Math.PI,Math.PI*2); ctx.fill(); const sw4=Math.sin((e.phase||0)*1.2+tick*0.03)*4; for(let i=0;i<5;i++){ const ox=(i-2)*7; ctx.strokeStyle='rgba(160,230,255,.4)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ox,4); ctx.quadraticCurveTo(ox+sw4+Math.sin(i)*3,16,ox+sw4*1.5,26); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(0,-10,6,0,7); ctx.fill(); ctx.globalAlpha=1; }
-  function drawPrismCore(e){  // 棱镜核心：六棱晶体旋转 + 折射闪光
-    ctx.drawImage(glowCache.pink,-24,-24,48,48);
-    ctx.save(); ctx.translate(e.x,e.y);
-    e.rot=(e.rot||0)+0.015; ctx.rotate(e.rot);
-    ctx.shadowColor='#b490ff'; ctx.shadowBlur=14;
-    const g=ctx.createRadialGradient(0,0,2,0,0,18); g.addColorStop(0,'#ffffff'); g.addColorStop(.35,'#d0c0ff'); g.addColorStop(.7,'#9070dd'); g.addColorStop(1,'#5030a0');
+  function drawPrismCore(e){
+    ctx.save();
+    e.rot=(e.rot||0)+0.012; ctx.rotate(e.rot);
+    // 外层光晕环
+    const pl=0.5+0.5*Math.sin(tick*0.06);
+    ctx.strokeStyle='rgba(180,140,255,'+(0.2+pl*0.15)+')'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.arc(0,0,20,0,7); ctx.stroke();
+    ctx.strokeStyle='rgba(200,170,255,'+(0.15+pl*0.1)+')'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,0,26,0,7); ctx.stroke();
+    // 六边形主体
+    ctx.shadowColor='#b490ff'; ctx.shadowBlur=6;
+    const g=ctx.createRadialGradient(0,0,1,0,0,15); g.addColorStop(0,'#d0c0ff'); g.addColorStop(.5,'#9070dd'); g.addColorStop(1,'#5030a0');
     ctx.fillStyle=g; ctx.beginPath();
-    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2, r=i%2?14:18; ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
+    ctx.moveTo(0,-15); ctx.lineTo(13,-7); ctx.lineTo(13,7); ctx.lineTo(0,15); ctx.lineTo(-13,7); ctx.lineTo(-13,-7);
     ctx.closePath(); ctx.fill();
-    ctx.shadowBlur=0; ctx.strokeStyle='rgba(220,200,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
-    // 棱镜折射线
-    const fl=0.3+0.3*Math.sin(tick*0.08); ctx.strokeStyle='rgba(255,255,255,'+(0.2+fl)+')'; ctx.lineWidth=0.8;
-    for(let i=0;i<3;i++){ const a=i/3*Math.PI*2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*20,Math.sin(a)*20); ctx.stroke(); }
+    ctx.shadowBlur=0;
+    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.2;
+    ctx.stroke();
+    // 折射线
+    ctx.strokeStyle='rgba(255,255,255,'+(0.2+pl*0.15)+')'; ctx.lineWidth=0.8;
+    for(let i=0;i<3;i++){ const a=i/3*Math.PI*2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*18,Math.sin(a)*18); ctx.stroke(); }
+    // 中心光核
+    ctx.fillStyle='rgba(255,255,255,'+(0.5+pl*0.2)+')'; ctx.shadowColor='#fff'; ctx.shadowBlur=5+pl*3;
+    ctx.beginPath(); ctx.arc(0,0,3,0,7); ctx.fill();
+    ctx.shadowBlur=0;
     ctx.restore();
   }
   function drawCrystal(e){ ctx.drawImage(glowCache.soft, -30,-32,60,64); ctx.save(); ctx.rotate(e.rot||0); ctx.fillStyle='#d0f0ff'; ctx.shadowColor='#b0e0ff'; ctx.shadowBlur=8; ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(16,-8); ctx.lineTo(18,10); ctx.lineTo(0,22); ctx.lineTo(-18,10); ctx.lineTo(-16,-8); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(0,22); ctx.moveTo(-16,-8); ctx.lineTo(18,10); ctx.moveTo(16,-8); ctx.lineTo(-18,10); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(0,0,4,0,7); ctx.fill(); ctx.restore(); }
@@ -3895,7 +4002,8 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     state=State.MAP; hud.classList.add('hidden');
     el('mapOverlay').classList.remove('hidden');
     const modeLabel=gameMode==='bossrush'?'泰坦猎杀':'深空远征';
-    el('mapSubtitle').textContent=modeLabel+' · 已解锁至第 '+mapMaxUnlocked()+' 关';
+    const maxUnlock=mapMaxUnlocked();
+    el('mapSubtitle').textContent=modeLabel+' · '+(maxUnlock>=CONFIG.levels.max?'全部通关':'已解锁至第 '+maxUnlock+' 关');
   }
   function updateMap(){ tick++; if(mapUnlockBurst>0) mapUnlockBurst--; mapDash+=0.22; }
   function clampMapCam(){ const maxC=Math.max(0, mapWorldH-H); mapCamY=Math.max(0, Math.min(mapCamY, maxC)); }
