@@ -253,12 +253,18 @@
   .upg-plane-head .stat-tag{ font-size:11px; font-weight:600; color:#9fb6ff; margin-left:6px; }
   /* Boss 图鉴卡片：左图右文 */
   /* Boss 图鉴：左卡片(图) + 右纯文字 */
-  .ency-boss{ display:flex; flex-direction:row; align-items:center; gap:14px; width:100%; }
-  .ency-boss-left{ background:rgba(10,16,44,.62); border:1px solid var(--stroke); border-radius:13px; padding:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .ency-boss{ display:flex; flex-direction:row; align-items:center; gap:14px; width:100%; background:rgba(10,16,44,.4); border:1px solid var(--stroke); border-radius:14px; padding:10px; }
+  .ency-boss-left{ flex-shrink:0; }
   .ency-boss-left .thumb{ width:110px; height:110px; }
-  .ency-boss-right{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:left; }
-  .ency-boss-right .nm{ text-align:left; font-weight:800; color:#dbe6ff; font-size:14px; }
-  .ency-boss-right .stat{ text-align:left; color:#8fa0d8; font-size:11px; line-height:1.5; }
+  .ency-boss-right{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; text-align:left; }
+  .boss-name-row{ display:flex; align-items:center; gap:8px; }
+  .boss-name-row .nm{ font-size:15px; font-weight:800; color:#dbe6ff; }
+  .boss-badge{ display:inline-block; background:rgba(255,255,255,.06); border:1px solid var(--stroke); border-radius:14px; padding:1px 9px; font-size:10px; font-weight:700; color:#9fb6ff; }
+  .boss-hp-bar{ height:5px; border-radius:3px; background:rgba(255,255,255,.06); overflow:hidden; }
+  .boss-hp-bar-inner{ height:100%; border-radius:3px; background:linear-gradient(90deg, #ff6a8a, #ffb14d); }
+  .boss-hp-text{ font-size:11px; color:#8fa0d8; }
+  .boss-phases{ font-size:10px; color:#6b7fbf; }
+  .boss-desc{ font-size:11px; color:#6b7fbf; line-height:1.4; }
   .hangar-card .nm{ font-weight:800; color:#dbe6ff; font-size:14px; }
   .hangar-card .stat{ color:#8fa0d8; font-size:11px; text-align:center; min-height:14px; line-height:1.5; }
   /* 机库按钮：统一为主界面「玻璃幽灵胶囊」风格 */
@@ -579,6 +585,11 @@
   el('confirmCancel').onclick=()=>{ el('confirmModal').classList.add('hidden'); };
   el('confirmOk').onclick=()=>{ el('confirmModal').classList.add('hidden'); if(confirmCb) confirmCb(); };
 
+// ============ 敌机分类 ============
+const CATEGORY={ normal:{ name:'普通', icon:'○', color:'#6b7fbf' }, elite:{ name:'精英', icon:'★', color:'#ffb14d' }, sentinel:{ name:'据点', icon:'◆', color:'#b06bff' }, hazard:{ name:'威胁', icon:'△', color:'#ff6a8a' } };
+function catOf(key){ return CONFIG?.enemies?.[key]?.cat || 'normal'; }
+const CAT_COIN_MUL = { normal:1.0, elite:1.5, sentinel:2.0, hazard:1.2 };
+
   el('clearBtn').onclick=()=>{ showConfirm('确定清空排行榜？此操作不可撤销',()=>{ localStorage.removeItem(LB_KEY); renderLB(); }); };
 
   // ============ Save (meta progression) ============
@@ -814,7 +825,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       fighter: { key:'fighter', name:'战斗机', desc:'机动型舰载机，左右游走并发射追踪弹。注意走位。', weight:0.24, w:46,h:44, hp:120, vy:1.0, vx:0.8, score:250,
                  spawn:{pad:70,y:-50}, coolInit:(cd)=>100*cd|0, coolReset:120,
                  bullet:{w:6,h:14,vy:2.3,dmg:18, glow:'rgba(255,138,61,0.9)', fill:'#ff8a3d', shape:'arrow'}, draw:drawFighter },
-      heavy:   { key:'heavy', name:'重装机', desc:'装甲厚实的重型轰炸机，弹幕三向散射。集中火力。', weight:0.10, w:64,h:60, hp:280, vy:0.8, score:600,
+      heavy:   { key:'heavy', cat:'elite', name:'重装机', desc:'装甲厚实的重型轰炸机，弹幕三向散射。集中火力。', weight:0.10, w:64,h:60, hp:280, vy:0.8, score:600,
                  spawn:{pad:90,y:-70}, coolInit:(cd)=>130*cd|0, coolReset:150,
                  bullet:{w:7,h:14,vy:2.0,dmg:22,spread:3,spreadVx:1.1, glow:'rgba(176,107,255,0.9)', fill:'#b06bff', shape:'shell'}, draw:drawHeavy,
                  explodeColor:'#ffb14d', explodeSize:34 },
@@ -826,14 +837,14 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       interceptor:{ key:'interceptor', name:'截击机', desc:'高速突防单位，下冲速度快，弹速快。优先清除！', weight:0.16, w:30,h:30, hp:60, vy:2.4, vx:0.6, score:160,
                  spawn:{pad:50,y:-36}, coolInit:(cd)=>70*cd|0, coolReset:95,
                  bullet:{w:5,h:10,vy:3.0,dmg:12, glow:'rgba(255,77,109,0.9)', fill:'#ff4d6d', shape:'bolt'}, draw:drawInterceptor },
-      bomber:  { key:'bomber', name:'轰炸舰', desc:'超厚血量的炸弹母舰。发射大伤害慢速弹，被砸到很疼。', weight:0.09, w:70,h:54, hp:420, vy:0.6, score:800,
+      bomber:  { key:'bomber', cat:'elite', name:'轰炸舰', desc:'超厚血量的炸弹母舰。发射大伤害慢速弹，被砸到很疼。', weight:0.09, w:70,h:54, hp:420, vy:0.6, score:800,
                  spawn:{pad:90,y:-70}, coolInit:(cd)=>150*cd|0, coolReset:170,
                  bullet:{w:12,h:16,vy:1.4,dmg:30, glow:'rgba(176,107,255,0.9)', fill:'#b06bff', shape:'orb'}, draw:drawBomber },
-      turret:  { key:'turret', name:'炮台阵列', desc:'五向密集散射，弹幕覆盖面最广。拉开距离周旋。', weight:0.10, w:56,h:48, hp:240, vy:0.7, score:500,
+      turret:  { key:'turret', cat:'elite', name:'炮台阵列', desc:'五向密集散射，弹幕覆盖面最广。拉开距离周旋。', weight:0.10, w:56,h:48, hp:240, vy:0.7, score:500,
                  spawn:{pad:80,y:-58}, coolInit:(cd)=>130*cd|0, coolReset:160,
                  bullet:{w:6,h:14,vy:1.9,dmg:16,spread:5,spreadVx:1.3, glow:'rgba(43,208,168,0.9)', fill:'#2bd0a8', shape:'arrow'}, draw:drawTurret },
       // 陨石：无攻击（无 bullet）、碰到战机掉血、可被击毁；高关登场
-      meteor:  { key:'meteor', name:'陨石', desc:'高速太空碎片。无攻击能力，但撞击造成高额伤害。', weight:0.07, w:54,h:54, hp:420, vy:0.7, score:150, contactDmg:50,
+      meteor:  { key:'meteor', cat:'hazard', name:'陨石', desc:'高速太空碎片。无攻击能力，但撞击造成高额伤害。', weight:0.07, w:54,h:54, hp:420, vy:0.7, score:150, contactDmg:50,
                  spawn:{pad:70,y:-60}, coolInit:()=>9999, coolReset:9999, draw:drawMeteor },
       // —— 新增普通怪 ——
       drone:   { key:'drone', name:'侦查蜂', desc:'微型无人侦查单位，三五成群高速掠过。体型极小难以命中。', weight:0.22, w:22,h:22, hp:40, vy:2.2, score:60,
@@ -852,30 +863,35 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
                  bullet:{w:4,h:8,vy:2.4,dmg:10, glow:'rgba(160,220,255,0.7)', fill:'#a0dcff', shape:'shard'}, draw:drawWraith,
                  move:e=>{ e.phase=(e.phase||0)+0.05; e.y+=e.vy; e.x=e.baseX+Math.sin(e.phase*1.3)*20; e.wave=(e.wave||0)+0.04; } },
       // —— 新增精英怪 ——
-      guardian:{ key:'guardian', name:'守护者', desc:'远古立方体核心，外层旋转能量环可格挡子弹。需击破核心。', weight:0.04, w:80,h:74, hp:520, vy:0.5, score:1100,
+      guardian:{ key:'guardian', cat:'elite', name:'守护者', desc:'远古立方体核心，外层旋转能量环可格挡子弹。需击破核心。', weight:0.04, w:80,h:74, hp:520, vy:0.5, score:1100,
                  spawn:{pad:90,y:-74}, coolInit:()=>90+(Math.random()*60|0), coolReset:80,
                  bullet:{w:7,h:14,vy:1.8,dmg:24,spread:4,spreadVx:1.0, glow:'rgba(255,200,100,0.9)', fill:'#ffc864', shape:'shell'}, draw:drawGuardian,
                  shieldRadius:20,
                  move:e=>{ e.y+=e.vy; e.x=W/2+Math.sin((e.phase=(e.phase||0)+0.012))*(W/2-100); e.ringR=(e.ringR||0)+0.03; } },
-      voidbeast:{ key:'voidbeast', name:'虚空吞噬兽', desc:'暗紫色多足异形生物。死亡后分裂为两只小型子体，不可大意。', weight:0.05, w:68,h:56, hp:380, vy:0.6, score:750,
+      voidbeast:{ key:'voidbeast', cat:'elite', name:'虚空吞噬兽', desc:'暗紫色多足异形生物。死亡后分裂为两只小型子体，不可大意。', weight:0.05, w:68,h:56, hp:380, vy:0.6, score:750,
                  spawn:{pad:80,y:-60}, coolInit:()=>100+(Math.random()*70|0), coolReset:100,
                  bullet:{w:6,h:14,vy:2.1,dmg:20,spread:2,spreadVx:0.6, glow:'rgba(160,80,200,0.9)', fill:'#a050c8', shape:'arrow'}, draw:drawVoidbeast,
                  onDeath:{ spawn:{ type:'larva', count:2, hp:60, w:20, h:14, vy:2.0, vx:1, score:30, contactDmg:12 } } },
-      ravager: { key:'ravager', name:'掠夺者', desc:'金色螳螂形异星猎手。周期性横向冲刺，弹幕带追踪。优先诛灭！', weight:0.04, w:62,h:50, hp:440, vy:0.5, score:950,
+      ravager: { key:'ravager', cat:'elite', name:'掠夺者', desc:'金色螳螂形异星猎手。周期性横向冲刺，弹幕带追踪。优先诛灭！', weight:0.04, w:62,h:50, hp:440, vy:0.5, score:950,
                  spawn:{pad:75,y:-55}, coolInit:()=>100+(Math.random()*60|0), coolReset:90,
                  bullet:{w:6,h:14,vy:2.2,dmg:20, glow:'rgba(255,200,60,0.9)', fill:'#ffc83c', shape:'arrow'}, draw:drawRavager,
                  move:e=>{ e.y+=e.vy; e.dashT=(e.dashT||0)-1; if(e.dashT<=0){ e.dashT=180+(Math.random()*120|0); e.vx=(Math.random()<.5?-3:3); e.dashLen=40+(Math.random()*30|0); } if(e.dashLen>0){ e.x+=e.vx; e.dashLen--; } else e.vx=0; if(e.x<e.w/2||e.x>W-e.w/2) e.vx*=-1; } },
-      hivequeen:{ key:'hivequeen', name:'巢穴女王', desc:'巨型囊状母体生物。腹部半透明可见幼体，周期性孵化虚空幼虫。', weight:0.03, w:86,h:70, hp:600, vy:0.4, score:1300,
+      hivequeen:{ key:'hivequeen', cat:'sentinel', name:'巢穴女王', desc:'巨型囊状母体生物。腹部半透明可见幼体，周期性孵化虚空幼虫。', weight:0.03, w:86,h:70, hp:600, vy:0.4, score:1300,
                  spawn:{pad:95,y:-74}, coolInit:()=>100+(Math.random()*50|0), coolReset:80,
                  bullet:{w:7,h:14,vy:1.7,dmg:26,spread:3,spreadVx:1.2, glow:'rgba(200,100,150,0.9)', fill:'#c86496', shape:'shell'}, draw:drawHivequeen,
                  spawnChildren:{ type:'larva', interval:260, max:12 } },
       // —— 新增撞击怪 ——
-      cosmicjelly:{ key:'cosmicjelly', name:'宇宙水母', desc:'半透明伞盖搭配飘荡触须，缓慢漂浮。撞击即伤，不可近身。', weight:0.06, w:54,h:62, hp:320, vy:0.35, score:200, contactDmg:45,
+      cosmicjelly:{ key:'cosmicjelly', cat:'hazard', name:'宇宙水母', desc:'半透明伞盖搭配飘荡触须，缓慢漂浮。撞击即伤，不可近身。', weight:0.06, w:54,h:62, hp:320, vy:0.35, score:200, contactDmg:45,
                  spawn:{pad:65,y:-60}, coolInit:()=>9999, coolReset:9999, draw:drawCosmicjelly,
                  move:e=>{ e.y+=e.vy; e.phase=(e.phase||0)+0.03; e.x=e.baseX+Math.sin(e.phase*0.7)*16; } },
-      crystal: { key:'crystal', name:'太空晶簇', desc:'菱形六面水晶矿物，缓慢自转。击碎时迸发璀璨碎片。', weight:0.06, w:44,h:50, hp:250, vy:0.45, score:180, contactDmg:38,
+      crystal: { key:'crystal', cat:'hazard', name:'太空晶簇', desc:'菱形六面水晶矿物，缓慢自转。击碎时迸发璀璨碎片。', weight:0.06, w:44,h:50, hp:250, vy:0.45, score:180, contactDmg:38,
                  spawn:{pad:60,y:-52}, coolInit:()=>9999, coolReset:9999, draw:drawCrystal,
                  move:e=>{ e.y+=e.vy; e.rot=(e.rot||0)+0.02; } },
+      prismCore:{ key:'prismCore', cat:'sentinel', name:'棱镜核心', desc:'六棱晶体驻留型炮台。入场悬停后360°旋转散射水晶弹，威胁极高。', weight:0.04, w:36,h:36, hp:380, vy:1.5, score:500,
+                 spawn:{pad:70,y:-40}, coolInit:()=>120+(Math.random()*40|0), coolReset:150,
+                 bullet:{w:5,h:10,vy:2.8,dmg:16,circleSpread:6, glow:'rgba(180,140,255,0.9)', fill:'#c8b0ff', shape:'shard'},
+                 draw:drawPrismCore,
+                 move:e=>{ if(!e.anchorY) e.anchorY=80+Math.random()*100; if(e.y<e.anchorY){ e.y+=e.vy; return; } e.y=e.anchorY; } },
     },
     boss: {
       w:160, h:104, baseY:-100, enterY:175,
@@ -989,7 +1005,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         if(n>=5) base.push('heavy','cosmicjelly','puffer');
         if(n>=6) base.push('guardian');
         if(n>=7) base.push('bomber');
-        if(n>=8) base.push('turret','voidbeast');
+        if(n>=8) base.push('turret','voidbeast','prismCore');
         if(n>=9) base.push('meteor','ravager');
         if(n>=10) base.push('hivequeen');
         return base;
@@ -1695,9 +1711,14 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     addRage((e.score||0)/100 * CONFIG.player.ultimate.gains.kill);
     if(!o.noHook) hookEnemyKill(getSkin(player.skin));
     const es = o.explodeSize!=null ? o.explodeSize : Math.round((ecfg?.explodeSize||20) * (o.explodeSizeMul||1));
-    explode(e.x, e.y, o.explodeColor || ecfg?.explodeColor || '#ff6a8a', es, o.explodeSpd||5);
+    // 分类击杀特效：精英金、据点紫、威胁橙、普通默认
+    const cat=catOf(e.type), ci=CATEGORY[cat];
+    const catColors={ normal:null, elite:'#ffb14d', sentinel:'#b06bff', hazard:'#ff8040' };
+    const catSize={ normal:es, elite:Math.round(es*1.4), sentinel:Math.round(es*1.6), hazard:Math.round(es*1.2) };
+    explode(e.x, e.y, o.explodeColor||catColors[cat]||ecfg?.explodeColor||'#ff6a8a', catSize[cat], o.explodeSpd||(cat==='sentinel'?7:5));
     if(Math.random()<CONFIG.powerups.enemyDrop) spawnPowerup(e.x, e.y);
-    if(Math.random()<CONFIG.powerups.coinDrop) spawnCoin(e.x, e.y, Math.max(2, Math.round((e.score||0)/8)));
+    const coinMul=CAT_COIN_MUL[cat]||1;
+    if(Math.random()<CONFIG.powerups.coinDrop) spawnCoin(e.x, e.y, Math.max(2, Math.round((e.score||0)/8*coinMul)));
     for(const h of onKillHooks) h(e, o);   // 扩展钩子
   }
   // 通用伤害：扣血→若致死则走 killEnemy，返回是否致死。新伤害源用此，避免重复死亡逻辑
@@ -1706,8 +1727,13 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     const p=prog(), spd=1+p*CONFIG.difficulty.enemySpeedK;
     const cd=1-p*CONFIG.difficulty.coolK;
     const def=pickEnemy();
+    // 棱镜核心：同屏限 2 个
+    if(def.key==='prismCore'){
+      let c=0; for(const e of enemies) if(e.type==='prismCore') c++;
+      if(c>=2) return;
+    }
     // 随机方向入场：上(70%) / 左(15%) / 右(15%)，撞击怪和Boss战仅上方
-    const impact=['meteor','cosmicjelly','crystal'].includes(def.key);
+    const impact=!!def.contactDmg;  // 有碰撞伤害 = 撞击型敌机，不走侧面
     let dir='top';
     if(!boss && !impact){
       const r=Math.random();
@@ -1742,6 +1768,8 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
     if(!b) return;                               // 无子弹（陨石）：不射击
     if(b.spread){                               // 扇形散射（heavy/turret 等）
       for(let a=-((b.spread-1)/2);a<=((b.spread-1)/2);a++) eBullets.push({x:e.x, y:e.y+e.h/2, w:b.w, h:b.h, vy:b.vy*bs, vx:a*b.spreadVx, dmg:b.dmg, glow:b.glow, fill:b.fill, shape:b.shape});
+    } else if(b.circleSpread){                  // 360°环形散射（棱镜核心）
+      for(let i=0;i<b.circleSpread;i++){ const a=i/b.circleSpread*Math.PI*2; eBullets.push({x:e.x, y:e.y, w:b.w, h:b.h, vx:Math.cos(a)*b.vy, vy:Math.sin(a)*b.vy, dmg:b.dmg, glow:b.glow, fill:b.fill, shape:b.shape}); }
     } else {
       eBullets.push({x:e.x, y:e.y+e.h/2, w:b.w, h:b.h, vy:b.vy*bs, vx:0, dmg:b.dmg, glow:b.glow, fill:b.fill, shape:b.shape});
     }
@@ -3618,6 +3646,21 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
   function drawRavager(e){ ctx.drawImage(glowCache.gold, -38,-30,76,60); ctx.fillStyle='#ffc83c'; ctx.beginPath(); ctx.moveTo(0,-22); ctx.lineTo(8,-12); ctx.lineTo(26,-16); ctx.lineTo(18,-2); ctx.lineTo(28,10); ctx.lineTo(16,18); ctx.lineTo(6,26); ctx.lineTo(-6,26); ctx.lineTo(-16,18); ctx.lineTo(-28,10); ctx.lineTo(-18,-2); ctx.lineTo(-26,-16); ctx.lineTo(-8,-12); ctx.closePath(); ctx.fill(); ctx.fillStyle='#fff0c0'; ctx.beginPath(); ctx.moveTo(10,-14); ctx.lineTo(20,-12); ctx.lineTo(14,0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(-10,-14); ctx.lineTo(-20,-12); ctx.lineTo(-14,0); ctx.closePath(); ctx.fill(); ctx.fillStyle='#8b0000'; ctx.beginPath(); ctx.arc(0,-6,3,0,7); ctx.fill(); }
   function drawHivequeen(e){ ctx.drawImage(glowCache.soft, -48,-40,96,80); ctx.fillStyle='#c86496'; ctx.beginPath(); ctx.ellipse(0,4,28,20,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(0,-12,18,14,0,0,Math.PI*2); ctx.fill(); const sw3=Math.sin(tick*0.04)*3; for(let i=0;i<4;i++){ const s=i<2?-1:1; ctx.strokeStyle='#c86496'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(s*22,-6+i*3); ctx.quadraticCurveTo(s*30+sw3,-4,s*34+sw3*2,8); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,.25)'; ctx.beginPath(); ctx.ellipse(0,4,14,8,0,0,Math.PI*2); ctx.fill(); for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc((i-1)*6,6,3,0,7); ctx.fill(); } ctx.fillStyle='#ff3060'; ctx.beginPath(); ctx.arc(0,-14,3,0,7); ctx.fill(); }
   function drawCosmicjelly(e){ ctx.globalAlpha=0.7; ctx.drawImage(glowCache.cyan, -34,-36,68,72); ctx.fillStyle='rgba(120,220,255,.35)'; ctx.beginPath(); ctx.ellipse(0,-8,26,16,0,Math.PI,Math.PI*2); ctx.fill(); const sw4=Math.sin((e.phase||0)*1.2+tick*0.03)*4; for(let i=0;i<5;i++){ const ox=(i-2)*7; ctx.strokeStyle='rgba(160,230,255,.4)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ox,4); ctx.quadraticCurveTo(ox+sw4+Math.sin(i)*3,16,ox+sw4*1.5,26); ctx.stroke(); } ctx.fillStyle='rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(0,-10,6,0,7); ctx.fill(); ctx.globalAlpha=1; }
+  function drawPrismCore(e){  // 棱镜核心：六棱晶体旋转 + 折射闪光
+    ctx.drawImage(glowCache.pink,-24,-24,48,48);
+    ctx.save(); ctx.translate(e.x,e.y);
+    e.rot=(e.rot||0)+0.015; ctx.rotate(e.rot);
+    ctx.shadowColor='#b490ff'; ctx.shadowBlur=14;
+    const g=ctx.createRadialGradient(0,0,2,0,0,18); g.addColorStop(0,'#ffffff'); g.addColorStop(.35,'#d0c0ff'); g.addColorStop(.7,'#9070dd'); g.addColorStop(1,'#5030a0');
+    ctx.fillStyle=g; ctx.beginPath();
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2, r=i%2?14:18; ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowBlur=0; ctx.strokeStyle='rgba(220,200,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
+    // 棱镜折射线
+    const fl=0.3+0.3*Math.sin(tick*0.08); ctx.strokeStyle='rgba(255,255,255,'+(0.2+fl)+')'; ctx.lineWidth=0.8;
+    for(let i=0;i<3;i++){ const a=i/3*Math.PI*2; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*20,Math.sin(a)*20); ctx.stroke(); }
+    ctx.restore();
+  }
   function drawCrystal(e){ ctx.drawImage(glowCache.soft, -30,-32,60,64); ctx.save(); ctx.rotate(e.rot||0); ctx.fillStyle='#d0f0ff'; ctx.shadowColor='#b0e0ff'; ctx.shadowBlur=8; ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(16,-8); ctx.lineTo(18,10); ctx.lineTo(0,22); ctx.lineTo(-18,10); ctx.lineTo(-16,-8); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(0,22); ctx.moveTo(-16,-8); ctx.lineTo(18,10); ctx.moveTo(16,-8); ctx.lineTo(-18,10); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(0,0,4,0,7); ctx.fill(); ctx.restore(); }
   function drawEnemy(e){
     ctx.save(); ctx.translate(e.x,e.y);
@@ -4164,9 +4207,10 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       }
       encyclopediaList.appendChild(grid);
     } else if (encyclopediaTab === 'bosses'){
-      encyclopediaList.appendChild(secTitle('Boss'));
+      encyclopediaList.appendChild(secTitle('BOSS · 关卡首领'));
       for (let i = 0; i < CONFIG.boss.archs.length; i++){
         const A = CONFIG.boss.archs[i];
+        const lv=i+1, hp=Math.round(CONFIG.boss.hp(lv));
         const row = el2('div', 'ency-boss');
         const left = el2('div', 'ency-boss-left');
         const cv = el2('canvas', 'thumb');
@@ -4174,28 +4218,47 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         left.appendChild(cv);
         row.appendChild(left);
         const right = el2('div', 'ency-boss-right');
-        right.appendChild(el2('div', 'nm', A.name));
-        right.appendChild(el2('div', 'stat', 'HP ' + Math.round(CONFIG.boss.hp(i+1)).toLocaleString() + '（关' + (i+1) + '）'));
-        right.appendChild(el2('div', 'stat', A.desc || ''));
+        // 名称行：名字 + 关卡徽章
+        const nameRow=el2('div','boss-name-row');
+        nameRow.appendChild(el2('div','nm',A.name));
+        const badge=el2('div','boss-badge'); badge.textContent='第 '+lv+' 关'; nameRow.appendChild(badge);
+        right.appendChild(nameRow);
+        right.appendChild(el2('div','boss-hp-text','HP '+hp.toLocaleString()));
+        // 狂怒阶段
+        const phases=A.phase||CONFIG.boss.phase||[];
+        if(phases.length) right.appendChild(el2('div','boss-phases','狂怒 ▸ '+phases.map(p=>Math.round(p*100)+'%').join(' · ')));
+        // 描述
+        right.appendChild(el2('div','boss-desc',A.desc||''));
         row.appendChild(right);
         encyclopediaList.appendChild(row);
       }
     } else if (encyclopediaTab === 'enemies'){
-      encyclopediaList.appendChild(secTitle('敌机'));
-      const grid = el2('div', 'hangar-grid');
-      for (const key of Object.keys(CONFIG.enemies)){
-        const e = CONFIG.enemies[key];
-        if (!e || !e.draw) continue;
-        const card = el2('div', 'hangar-card');
-        const cv = el2('canvas', 'thumb');
-        drawEnemyThumb(cv, key);
-        card.appendChild(cv);
-        card.appendChild(el2('div', 'nm', e.name || key));
-        card.appendChild(el2('div', 'stat', 'HP ' + e.hp + '  ·  得分 ' + e.score));
-        card.appendChild(el2('div', 'stat', e.desc || ''));
-        grid.appendChild(card);
+      // 按分类分组展示
+      const cats=[ 'normal','elite','sentinel','hazard' ];
+      for(const ck of cats){
+        const ci=CATEGORY[ck]; const list=[];
+        for(const key of Object.keys(CONFIG.enemies)){
+          const e=CONFIG.enemies[key];
+          if(!e||!e.draw) continue;
+          if(catOf(key)!==ck) continue;
+          list.push(e);
+        }
+        if(!list.length) continue;
+        encyclopediaList.appendChild(secTitle(ci.icon+' '+ci.name));
+        const grid=el2('div','hangar-grid');
+        for(const e of list){
+          const card=el2('div','hangar-card');
+          const cv=el2('canvas','thumb');
+          drawEnemyThumb(cv, e.key);
+          card.appendChild(cv);
+          const hdr=el2('div','nm',{style:'font-size:12px;color:'+ci.color}); hdr.textContent=e.name;
+          card.appendChild(hdr);
+          card.appendChild(el2('div','stat','HP '+e.hp+'  ·  得分 '+e.score));
+          card.appendChild(el2('div','stat',e.desc||''));
+          grid.appendChild(card);
+        }
+        encyclopediaList.appendChild(grid);
       }
-      encyclopediaList.appendChild(grid);
     } else if (encyclopediaTab === 'drops'){
       // 完全数据驱动：遍历 CONFIG.powerups.types，新增奖励只需在 types 加一条（带 name/desc），无需改动此处
       encyclopediaList.appendChild(secTitle('掉落奖励'));
