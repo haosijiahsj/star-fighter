@@ -199,7 +199,7 @@
   .board h3{ font-size:13px; color:#9fb6ff; letter-spacing:2px; margin:4px 4px 8px; display:flex; justify-content:space-between; align-items:center; }
   .board .clear{ font-size:11px; color:#7f96d6; cursor:pointer; pointer-events:auto; }
   ol.rank{ list-style:none; display:flex; flex-direction:column; gap:5px; max-height:180px; overflow:auto; }
-  #overScreen .btn.big{ margin-top:8px; font-size:13px; padding:10px; }
+  #overScreen .btn.big{ margin-top:6px; font-size:13px; padding:10px; }
   ol.rank li{ display:flex; align-items:center; gap:10px; background:rgba(10,16,44,.7); border:1px solid var(--stroke);
     border-radius:11px; padding:9px 12px; font-size:14px; }
   ol.rank li .no{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:800; background:rgba(120,160,255,.2); }
@@ -841,7 +841,7 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
                  move:e=>{ e.phase=(e.phase||0)+0.06; e.y+=e.vy; e.x=e.baseX+Math.sin(e.phase)*54; } },
       interceptor:{ key:'interceptor', name:'截击机', desc:'高速突防单位，下冲速度快，弹速快。优先清除！', weight:0.16, w:30,h:30, hp:60, vy:2.4, vx:0.6, score:160,
                  spawn:{pad:50,y:-36}, coolInit:(cd)=>70*cd|0, coolReset:95,
-                 bullet:{w:5,h:10,vy:3.0,dmg:12, glow:'rgba(255,77,109,0.9)', fill:'#ff4d6d', shape:'bolt'}, draw:drawInterceptor },
+                 bullet:{w:2,h:3,vy:3.0,dmg:12, glow:'rgba(255,77,109,0.9)', fill:'#ff4d6d', shape:'bolt'}, draw:drawInterceptor },
       bomber:  { key:'bomber', cat:'elite', name:'轰炸舰', desc:'超厚血量的炸弹母舰。发射大伤害慢速弹，被砸到很疼。', weight:0.09, w:70,h:54, hp:420, vy:0.6, score:800,
                  spawn:{pad:90,y:-70}, coolInit:(cd)=>150*cd|0, coolReset:170,
                  bullet:{w:12,h:16,vy:1.4,dmg:30, glow:'rgba(176,107,255,0.9)', fill:'#b06bff', shape:'orb'}, draw:drawBomber },
@@ -1006,14 +1006,13 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
         // 自动算法：进度百分比决定分类 + 权重偏移决定个体
         const progress=n/CONFIG.levels.max;
         const cats=['normal'];
-        if(progress>0.2) cats.push('hazard');
-        if(progress>0.5) cats.push('elite');
-        if(progress>0.8) cats.push('sentinel');
+        if(progress>0.10) cats.push('hazard');
+        if(progress>0.35) cats.push('elite');
+        if(progress>0.55) cats.push('sentinel');
         const bias=0.6+progress*0.4;   // 越后期低权重怪也加入
         const pool=[];
         for(const e of Object.values(CONFIG.enemies)){
-          if(!cats.includes(catOf(e.key))) continue;
-          if(e.weight>=(0.05/bias)) pool.push(e.key);
+          if(cats.includes(catOf(e.key))) pool.push(e.key);
         }
         return pool;
       }, bossArch:null, theme:null },
