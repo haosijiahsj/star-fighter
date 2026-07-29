@@ -265,6 +265,22 @@
   .boss-hp-text{ font-size:11px; color:#8fa0d8; }
   .boss-phases{ font-size:10px; color:#6b7fbf; }
   .boss-desc{ font-size:11px; color:#6b7fbf; line-height:1.4; }
+  /* 升级面板新样式 */
+  .upg-panel{ width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .upg-nav{ display:flex; align-items:center; gap:12px; width:100%; justify-content:center; }
+  .upg-nav .arrow{ width:32px; height:32px; border-radius:50%; border:1px solid var(--stroke); background:rgba(10,16,44,.6); color:#9fb6ff; font-size:16px; cursor:pointer; display:grid; place-items:center; transition:.15s; }
+  .upg-nav .arrow:hover{ border-color:var(--neon); color:#fff; }
+  .upg-nav .nm{ font-size:16px; font-weight:800; color:#dbe6ff; }
+  .upg-nav .tag{ font-size:11px; color:#9fb6ff; }
+  .upg-preview{ width:100%; max-width:360px; height:230px; border-radius:14px; border:1px solid var(--stroke); background:rgba(10,16,44,.3); overflow:hidden; }
+  .upg-preview canvas{ width:100%; height:100%; display:block; }
+  .upg-stats{ width:100%; max-width:340px; display:flex; flex-direction:column; gap:8px; }
+  .upg-stat{ display:flex; align-items:center; gap:8px; }
+  .upg-stat .label{ font-size:12px; color:#9fb6ff; width:48px; flex-shrink:0; font-weight:600; }
+  .upg-stat .bar-track{ flex:1; height:6px; border-radius:3px; background:rgba(255,255,255,.06); overflow:hidden; }
+  .upg-stat .bar-fill{ height:100%; border-radius:3px; transition:width .2s; }
+  .upg-stat .lv-text{ font-size:11px; color:#dbe6ff; width:36px; text-align:center; flex-shrink:0; font-weight:700; }
+  .upg-stat .btn.sm{ padding:4px 10px; font-size:11px; border-radius:8px; white-space:nowrap; }
   .hangar-card .nm{ font-weight:800; color:#dbe6ff; font-size:14px; }
   .hangar-card .stat{ color:#8fa0d8; font-size:11px; text-align:center; min-height:14px; line-height:1.5; }
   /* 机库按钮：统一为主界面「玻璃幽灵胶囊」风格 */
@@ -1485,29 +1501,74 @@ const PASSIVE_NAMES={ rapidFire:'速射核心', fury:'连杀狂潮', phaseDodge:
       for(const id of Object.keys(S.wingType)) g2.appendChild(wingCard(id));
       hangarList.appendChild(g2);
     } else if(shopTab==='upg'){
-      // 战机强化：每架已购战机独立升级、独立付金币
+      // 战机强化：单机大图 + 左右切换 + 进度条
       const S=CONFIG.player.shop;
-      hangarList.appendChild(secTitle('⚡ 战机强化 · 仅已购机型独立强化'));
-      const owned = CONFIG.player.skins.filter(sk => save.skins.owned.includes(sk.id));
-      // 当前出战战机排到最前面
-      owned.sort((a,b) => (b.id===selSkin?1:0) - (a.id===selSkin?1:0));
-      for(const sk of owned){
-        const u=planeUpg(sk.id);
-        const isSel = sk.id === selSkin;
-        const block=el2('div','upg-plane-block' + (isSel?' sel':''));
-        const head=el2('div','upg-plane-head');
-        const cv=el2('canvas','thumb'); drawSkinThumb(cv, sk.draw); head.appendChild(cv);
-        const nDiv = el2('div','nm', sk.name);
-        const tag = el2('span','stat-tag', isSel ? '· 当前出击' : '');
-        nDiv.appendChild(tag); head.appendChild(nDiv);
-        block.appendChild(head);
-        const grid=el2('div','hangar-grid');
-        grid.appendChild(upgCard('攻击力', '每级 +'+Math.round(CONFIG.player.atkPerLv*100)+'% 子弹伤害', '等级 '+u.atkLv+' / '+S.atk.length, S.atk[u.atkLv], coinsNow()>=S.atk[u.atkLv], ()=>{ Save.spend(S.atk[u.atkLv]); Save.upgradeAtk(sk.id); }, u.atkLv>=S.atk.length));
-        const sCur=u.streamLv>=S.stream.length?5:Math.min(5,1+u.streamLv);
-        grid.appendChild(upgCard('子弹束', '永久火力下限（满级恒 5 束）', '当前下限 '+sCur+' 束', S.stream[u.streamLv], coinsNow()>=S.stream[u.streamLv], ()=>{ Save.spend(S.stream[u.streamLv]); Save.upgradeStream(sk.id); }, u.streamLv>=S.stream.length));
-        block.appendChild(grid);
-        hangarList.appendChild(block);
+      hangarList.appendChild(secTitle('⚡ 战机强化'));
+      const owned=CONFIG.player.skins.filter(sk=>save.skins.owned.includes(sk.id));
+      let idx=owned.findIndex(sk=>sk.id===selSkin); if(idx<0) idx=0;
+      function renderUpg(){
+        hangarList.innerHTML='';
+        hangarList.appendChild(secTitle('⚡ 战机强化'));
+        const sk=owned[idx]; if(!sk) return;
+        const u=planeUpg(sk.id), panel=el2('div','upg-panel');
+        // 导航行
+        const nav=el2('div','upg-nav');
+        const prevBtn=el2('div','arrow','‹'); prevBtn.onclick=()=>{ idx=(idx-1+owned.length)%owned.length; renderUpg(); };
+        nav.appendChild(prevBtn);
+        const nSpan=el2('span','nm',sk.name);
+        if(sk.id===selSkin) nSpan.appendChild(el2('span','tag',' 当前出击'));
+        else { const selBtn=el2('span','tag',' 选择'); selBtn.style.cssText='cursor:pointer;color:var(--neon)'; selBtn.onclick=()=>{ selSkin=sk.id; try{localStorage.setItem(SKIN_KEY,sk.id);}catch(e){} renderHangar(); }; nSpan.appendChild(selBtn); }
+        nav.appendChild(nSpan);
+        const nextBtn=el2('div','arrow','›'); nextBtn.onclick=()=>{ idx=(idx+1)%owned.length; renderUpg(); };
+        nav.appendChild(nextBtn);
+        panel.appendChild(nav);
+        // 动态预览
+        const preview=el2('div','upg-preview');
+        const cv=el2('canvas'); preview.appendChild(cv);
+        panel.appendChild(preview);
+        const wt=CONFIG.player.wingTypes[save.wings.equipped]||null;
+        let rafId=null;
+        function animatePreview(){
+          if(shopTab!=='upg') { if(rafId) cancelAnimationFrame(rafId); return; }
+          const {g,w,h}=prepThumb(cv); if(!w||!h) return;
+          const s=Math.min(w*0.5/(sk.w||44), h*0.5/(sk.h||52));
+          const savedCtx=ctx, hadP=player, ti=tick, iv=invuln;
+          const cx=w/2, cy=h*0.43; player={x:cx,y:cy}; ctx=g; invuln=0;
+          try{ g.save(); g.translate(cx,cy); g.scale(s,s); g.translate(-cx,-cy);
+            sk.draw();
+            if(wt){ g.shadowColor=wt.color; g.shadowBlur=6/s; for(const side of[-1,1]){ g.save(); g.translate(cx+side*CONFIG.player.wingOffset,cy+10); g.scale(s*0.35,s*0.35); (wt.draw||drawWingGunner)(wt.color); g.restore(); } }
+            g.restore();
+          } finally { ctx=savedCtx; player=hadP; tick=ti; invuln=iv; }
+          rafId=requestAnimationFrame(animatePreview);
+        }
+        setTimeout(animatePreview,16);
+        // 升级项
+        const stats=el2('div','upg-stats');
+        const maxAtk=S.atk.length;
+        const maxStream=S.stream.length;
+        for(const {key,label,max,prices,maxDesc,color} of[
+          {key:'atkLv',label:'攻击力',max:maxAtk,prices:S.atk,color:'#ff6a8a'},
+          {key:'streamLv',label:'子弹束',max:maxStream,prices:S.stream,color:'#22e6ff'}]){
+          const row=el2('div','upg-stat');
+          row.appendChild(el2('div','label',label));
+          const bar=el2('div','bar-track');
+          const fill=el2('div','bar-fill'); fill.style.width=Math.min(100,(u[key]/(max))*100)+'%'; fill.style.background=color; bar.appendChild(fill);
+          row.appendChild(bar);
+          const maxed=u[key]>=max;
+          row.appendChild(el2('div','lv-text',(u[key]>=max?max:u[key])+'/'+max));
+          if(maxed) row.appendChild(el2('div','btn sm','已满级'));
+          else {
+            const price=prices[u[key]]; const can=coinsNow()>=price;
+            const b=el2('button','btn sm'+(can?' warn':''),CONFIG.ui.coinIcon+' '+price); b.disabled=!can;
+            if(can) b.onclick=()=>{ Save.spend(price); if(key==='atkLv') Save.upgradeAtk(sk.id); else Save.upgradeStream(sk.id); renderUpg(); };
+            row.appendChild(b);
+          }
+          stats.appendChild(row);
+        }
+        panel.appendChild(stats);
+        hangarList.appendChild(panel);
       }
+      renderUpg();
     } else if(shopTab==='items'){
       renderShopItems();
     }
